@@ -300,7 +300,6 @@
         android:text="@string/sign_out"
         android:textColor="@color/white" />
 
-
     <TextView
         android:id="@+id/signOutBtn"
         android:layout_width="match_parent"
