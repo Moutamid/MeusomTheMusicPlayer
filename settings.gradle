@@ -1,0 +1,3 @@
+rootProject.name = "Meusom - the music player"
+include ':common', ':app', ':library', ':ffmpeg'
+//include ':app'
