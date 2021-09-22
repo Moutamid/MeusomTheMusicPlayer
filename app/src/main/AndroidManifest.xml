@@ -24,8 +24,15 @@
             android:name=".CommandExampleActivity"
             android:screenOrientation="portrait" />
         <activity android:name=".AdvertisementACtivity" />
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".DownloadActivity" />
+        <activity android:name=".SettingsActivity">
+        </activity>
+        <activity android:name=".DownloadActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <activity android:name=".LoginActivity" />
         <activity
             android:name=".MainActivity"

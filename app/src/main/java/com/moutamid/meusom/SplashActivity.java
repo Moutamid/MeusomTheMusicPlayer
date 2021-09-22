@@ -44,7 +44,8 @@ public class SplashActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             }
-        }, 1000);
+        }, 500);
+//        }, 1000);
 
 //        startActivity(new Intent(this, LoginActivity.class));
 

@@ -58,6 +58,8 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.setMessage("Signing you in...");
 
+        emailEditText.setText("moutamid@gmail.com");
+        passwordEditText.setText("123456");
 
         setHintClickListener();
         loginButton.setOnClickListener(new View.OnClickListener() {

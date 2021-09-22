@@ -36,6 +36,8 @@ public class DownloadActivity extends AppCompatActivity {
     private Context context = DownloadActivity.this;
     private Utils utils = new Utils();
 
+    private boolean isIntent = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,6 +47,18 @@ public class DownloadActivity extends AppCompatActivity {
             utils.changeLanguage(context, "pr");
         }
         setContentView(R.layout.activity_download);
+
+        editText = findViewById(R.id.edittextdownload);
+
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+
+        if ("android.intent.action.SEND".equals(action) && "text/plain".equals(type)) {
+            editText.setText(intent.getStringExtra("android.intent.extra.TEXT"));
+            isIntent = true;
+            executeDownloadTask();
+        }
 
         findViewById(R.id.backBtnDownload).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -67,30 +81,32 @@ public class DownloadActivity extends AppCompatActivity {
     private EditText editText;
 
     private void setAddTaskButton() {
-        editText = findViewById(R.id.edittextdownload);
         findViewById(R.id.ajgh).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                executeDownloadTask();
+            }
+        });
+    }
 
-                String url = editText.getText().toString().trim();
+    private void executeDownloadTask() {
+        String url = editText.getText().toString().trim();
 
-                if (TextUtils.isEmpty(url)) {
-                    editText.setError("Please enter a url!");
-                    return;
-                }
+        if (TextUtils.isEmpty(url)) {
+            editText.setError("Please enter a url!");
+            return;
+        }
 
-                if (TextUtils.isEmpty(getVideoId(url))) {
-                    editText.setError("Wrong url!");
-                } else {
-                    GetSongMetaData getSongMetaData = new GetSongMetaData();
-                    getSongMetaData.setUrl(url);
-                    getSongMetaData.execute();
+        if (TextUtils.isEmpty(getVideoId(url))) {
+            editText.setError("Wrong url!");
+        } else {
+            GetSongMetaData getSongMetaData = new GetSongMetaData();
+            getSongMetaData.setUrl(url);
+            getSongMetaData.execute();
 
 //                    Toast.makeText(DownloadActivity.this, getVideoId(url), Toast.LENGTH_SHORT).show();
 
-                }
-            }
-        });
+        }
     }
 
     private class GetSongMetaData extends AsyncTask<String, Void, String> {
@@ -168,6 +184,7 @@ public class DownloadActivity extends AppCompatActivity {
             intent.putExtra(Constants.SONG_NAME, songName);
             intent.putExtra(Constants.SONG_ALBUM_NAME, songAlbumName);
             intent.putExtra(Constants.SONG_COVER_URL, songCoverUrl);
+            intent.putExtra(Constants.FROM_INTENT, isIntent);
 
             editText.setText("");
 

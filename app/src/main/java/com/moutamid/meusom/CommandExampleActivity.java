@@ -90,6 +90,12 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             runOnUiThread(() -> {
 //                        progressBar.setProgress((int) progress);
                         tvCommandStatus.setText(String.valueOf(progress) + "% (ETA " + String.valueOf(etaInSeconds) + " seconds)");
+//                        tvCommandStatus.setText(String.valueOf(progress) + "% (ETA " + String.valueOf(etaInSeconds) + " seconds)");
+                        if (isInBackground) {
+                            NotificationHelper helper = new NotificationHelper(context);
+                            helper.sendDownloadingNotification(currentDownloadName,
+                                    progress + "% (ETA " + etaInSeconds + " seconds)", currentDownloadUrl);
+                        }
                     }
             );
         }
@@ -101,13 +107,15 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
 //    private String YTUrl;
 
+    private boolean isIntent = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.ENGLISH)) {
-            utils.changeLanguage(context,"en");
+            utils.changeLanguage(context, "en");
         } else if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.PORTUGUESE)) {
-            utils.changeLanguage(context,"pr");
+            utils.changeLanguage(context, "pr");
         }
         setContentView(R.layout.activity_command_example);
 
@@ -116,10 +124,16 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             songModel.setSongName(getIntent().getStringExtra(Constants.SONG_NAME));
             songModel.setSongAlbumName(getIntent().getStringExtra(Constants.SONG_ALBUM_NAME));
             songModel.setSongCoverUrl(getIntent().getStringExtra(Constants.SONG_COVER_URL));
+            isIntent = getIntent().getBooleanExtra(Constants.FROM_INTENT, false);
 
             databaseReference.child(Constants.SONGS)
                     .child(auth.getCurrentUser().getUid()).push()
-                    .setValue(songModel);
+                    .setValue(songModel).addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+//                    Toast.makeText(context, "Added to database", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
 
         initViews();
@@ -164,6 +178,8 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
                         }
 
+//                        Toast.makeText(context, songModelArrayList.size() + "", Toast.LENGTH_SHORT).show();
+
                         adapter = new RecyclerViewAdapterMessages();
                         conversationRecyclerView.setAdapter(adapter);
                     }
@@ -175,6 +191,10 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                 });
 
     }
+
+    private String currentDownloadName = "null";
+    private String currentDownloadUrl = "null";
+
 
     private class RecyclerViewAdapterMessages extends RecyclerView.Adapter
             <RecyclerViewAdapterMessages.ViewHolderRightMessage> {
@@ -235,6 +255,16 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                     showDeleteDialog(model);
                 }
             });
+
+            // AUTO DOWNLOADING SONG
+            if (isIntent && position == songModelArrayList.size() - 1) {
+                if (!holder.downloadStatus.getText()
+                        .toString().equals(Constants.COMPLETED)) {
+                    runCommand(model.getSongYTUrl(), holder, model.getSongPushKey());
+                    currentDownloadName = model.getSongName();
+                    currentDownloadUrl = model.getSongCoverUrl();
+                }
+            }
 
         }
 
@@ -337,9 +367,20 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isInBackground = true;
+    }
+
+    private boolean isInBackground = false;
+
     private void runCommand(String songYTUrll,
                             RecyclerViewAdapterMessages.ViewHolderRightMessage holder,
                             String songPushKey) {
+
+        NotificationHelper helper = new NotificationHelper(context);
+
         if (running) {
             Toast.makeText(CommandExampleActivity.this, "Please wait. A download is already in progress", Toast.LENGTH_LONG).show();
             return;
@@ -374,6 +415,9 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 //        showStart();
 
         holder.downloadStatus.setText("Starting download...");
+        if (isInBackground)
+            helper.sendDownloadingNotification(holder.songName.getText().toString(), "Starting download...", currentDownloadUrl);
+
         tvCommandStatus = holder.downloadStatus;
 
         running = true;
@@ -385,6 +429,8 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 //                    progressBar.setProgress(100);
                     tvCommandStatus.setText(Constants.COMPLETED);
                     tvCommandOutput.setText(youtubeDLResponse.getOut());
+                    if (isInBackground)
+                        helper.sendDownloadingNotification(holder.songName.getText().toString(), "Download Completed!", currentDownloadUrl);
                     String outputStr = youtubeDLResponse.getOut();
                     extractNewNameAndUpload(outputStr, holder, songPushKey);
                     holder.downloadButton.setImageResource(R.drawable.off_track);

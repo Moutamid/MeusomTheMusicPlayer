@@ -21,5 +21,6 @@ public class Constants {
     public static final String CURRENT_SPACE_AMOUNT = "current_space_amount";
     public static final String USER_EMAIL = "user_name";
     public static final String USER_PASSWORD = "user_password";
+    public static final String FROM_INTENT = "from_intent";
 
 }
