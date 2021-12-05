@@ -5,6 +5,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:name=".App"
@@ -18,20 +19,25 @@
         android:theme="@style/Theme.MeusomTheMusicPlayer">
         <activity
             android:name=".MainActivity2"
-            android:exported="true" />
-        <activity android:name=".MySoundActivity" />
-        <activity
-            android:name=".CommandExampleActivity"
-            android:screenOrientation="portrait" />
-        <activity android:name=".AdvertisementACtivity" />
-        <activity android:name=".SettingsActivity">
-        </activity>
-        <activity android:name=".DownloadActivity">
+            android:theme="@style/Theme.Transparent"
+            android:noHistory="true"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+
+        </activity>
+        <activity android:name=".MySoundActivity" />
+        <activity
+            android:name=".CommandExampleActivity"
+            android:screenOrientation="portrait" />
+        <activity android:name=".AdvertisementACtivity" />
+        <activity android:name=".SettingsActivity"></activity>
+        <activity android:name=".DownloadActivity">
+
         </activity>
         <activity android:name=".LoginActivity" />
         <activity
@@ -62,6 +68,29 @@
         <meta-data
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"
             android:value="true" />
+
+        <!--<service
+            android:name=".ExampleService"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </service>-->
+
+        <!--<receiver
+            android:name=".BroadCastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </receiver>-->
+
     </application>
 
 </manifest>

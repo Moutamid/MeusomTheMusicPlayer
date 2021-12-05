@@ -244,7 +244,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
 //                    Toast.makeText(context, model.getSongYTUrl(), Toast.LENGTH_SHORT).show();
                         runCommand(model.getSongYTUrl(), holder, model.getSongPushKey());
-
+                        holder.downloadButton.setVisibility(View.GONE);
                     }
                 }
             });
@@ -260,6 +260,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             if (isIntent && position == songModelArrayList.size() - 1) {
                 if (!holder.downloadStatus.getText()
                         .toString().equals(Constants.COMPLETED)) {
+                    holder.downloadButton.setVisibility(View.GONE);
                     runCommand(model.getSongYTUrl(), holder, model.getSongPushKey());
                     currentDownloadName = model.getSongName();
                     currentDownloadUrl = model.getSongCoverUrl();
@@ -441,6 +442,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                     pbLoading.setVisibility(View.GONE);
                     tvCommandStatus.setText(getString(R.string.command_failed));
                     tvCommandOutput.setText(e.getMessage());
+                    holder.downloadButton.setImageResource(R.drawable.donwloadtrack);
                     Toast.makeText(CommandExampleActivity.this, "Download failed", Toast.LENGTH_SHORT).show();
                     Toast.makeText(CommandExampleActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
                     running = false;

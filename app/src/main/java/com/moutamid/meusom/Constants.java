@@ -22,5 +22,6 @@ public class Constants {
     public static final String USER_EMAIL = "user_name";
     public static final String USER_PASSWORD = "user_password";
     public static final String FROM_INTENT = "from_intent";
+    public static final String LAST_SONG_INDEX = "lastsongindex";
 
 }

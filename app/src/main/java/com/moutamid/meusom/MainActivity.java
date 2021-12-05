@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
     // Handler to update UI timer, progress bar etc,.
     private Handler mHandler = new Handler();
 
-//    private SongsManager songManager;
+    //    private SongsManager songManager;
     private Utilities utilities;
     private int seekForwardTime = 5000; // 5000 milliseconds
     private int seekBackwardTime = 5000; // 5000 milliseconds
@@ -107,9 +107,9 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         super.onCreate(savedInstanceState);
 
         if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.ENGLISH)) {
-            utils.changeLanguage(context,"en");
+            utils.changeLanguage(context, "en");
         } else if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.PORTUGUESE)) {
-            utils.changeLanguage(context,"pr");
+            utils.changeLanguage(context, "pr");
         }
 
         setContentView(R.layout.activity_main);
@@ -147,9 +147,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         // Getting all songs list
 //        getSongsList();
 //        songsList = songManager.getPlayList();
-
-        // By default play first song
-//        playSong(0);
 
         /**
          * Play button click event
@@ -280,14 +277,13 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                     return;
                 }
 
-                // check if next song is there or not
-                if (currentSongIndex < (songsList.size() - 1)) {
-                    playSong(currentSongIndex + 1);
-                    currentSongIndex = currentSongIndex + 1;
+                if (currentSongIndex > 0) {
+                    playSong(currentSongIndex - 1);
+                    currentSongIndex = currentSongIndex - 1;
                 } else {
-                    // play first song
-                    playSong(0);
-                    currentSongIndex = 0;
+                    // play last song
+                    playSong(songsList.size() - 1);
+                    currentSongIndex = songsList.size() - 1;
                 }
 
             }
@@ -304,14 +300,14 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                 if (slideUpB) {
                     return;
                 }
-                // check if next song is there or not
-                if (currentSongIndex < (songsList.size() - 1)) {
-                    playSong(currentSongIndex + 1);
-                    currentSongIndex = currentSongIndex + 1;
+
+                if (currentSongIndex > 0) {
+                    playSong(currentSongIndex - 1);
+                    currentSongIndex = currentSongIndex - 1;
                 } else {
-                    // play first song
-                    playSong(0);
-                    currentSongIndex = 0;
+                    // play last song
+                    playSong(songsList.size() - 1);
+                    currentSongIndex = songsList.size() - 1;
                 }
 
             }
@@ -329,15 +325,15 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                     return;
                 }
 
-                if (currentSongIndex > 0) {
-                    playSong(currentSongIndex - 1);
-                    currentSongIndex = currentSongIndex - 1;
+                // check if next song is there or not
+                if (currentSongIndex < (songsList.size() - 1)) {
+                    playSong(currentSongIndex + 1);
+                    currentSongIndex = currentSongIndex + 1;
                 } else {
-                    // play last song
-                    playSong(songsList.size() - 1);
-                    currentSongIndex = songsList.size() - 1;
+                    // play first song
+                    playSong(0);
+                    currentSongIndex = 0;
                 }
-
             }
         });
 
@@ -430,6 +426,32 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             }
         });
 
+        // INIT VOLUME SEEKBAR
+        initVolumeSeekbar();
+
+    }
+
+    private void initVolumeSeekbar() {
+        AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        int maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        int curVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        SeekBar volControl = (SeekBar)findViewById(R.id.volumeSeekbar);
+        volControl.setMax(maxVolume);
+        volControl.setProgress(curVolume);
+        volControl.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onStopTrackingTouch(SeekBar arg0) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar arg0) {
+            }
+
+            @Override
+            public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, arg1, 0);
+            }
+        });
     }
 
     //-----------------------------------------------------
@@ -565,10 +587,22 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 
                         }
 
-//                        Toast.makeText(context, "Playlist loaded.", Toast.LENGTH_SHORT).show();
+                        // PLAYLIST LOADED
+                        // By default play first song
+                        currentSongIndex = utils.getStoredInteger(MainActivity.this, Constants.LAST_SONG_INDEX);
+                        playSong(currentSongIndex);
+
+                        // check for already playing
+                        if (mp.isPlaying()) {
+                            if (mp != null) {
+                                mp.pause();
+                                // Changing button image to play button
+                                btnPlay.setImageResource(R.drawable.play);
+                                btnPlaySmall.setImageResource(R.drawable.play);
+                            }
+                        }
 
 //                        Toast.makeText(context, "Playlist loaded! You can now tap on the play button to play your music!", Toast.LENGTH_LONG).show();
-//                        playSong(0);
                     }
 
                     @Override
@@ -696,6 +730,9 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             Toast.makeText(context, "Please wait...", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        utils.storeInteger(MainActivity.this, Constants.LAST_SONG_INDEX, songIndex);
+
         SongModel currentSongModel = songsList.get(songIndex);
         try {
             mp.reset();
@@ -883,14 +920,24 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             playSong(currentSongIndex);
         } else {
             // no repeat or shuffle ON - play next song
-            if (currentSongIndex < (songsList.size() - 1)) {
+            /*if (currentSongIndex < (songsList.size() - 1)) {
                 playSong(currentSongIndex + 1);
                 currentSongIndex = currentSongIndex + 1;
             } else {
                 // play first song
                 playSong(0);
                 currentSongIndex = 0;
+            }*/
+
+            if (currentSongIndex > 0) {
+                playSong(currentSongIndex - 1);
+                currentSongIndex = currentSongIndex - 1;
+            } else {
+                // play last song
+                playSong(songsList.size() - 1);
+                currentSongIndex = songsList.size() - 1;
             }
+
         }
 
         if (adapter != null) {

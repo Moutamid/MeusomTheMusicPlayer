@@ -89,8 +89,10 @@ public class DownloadActivity extends AppCompatActivity {
         });
     }
 
+    String url;
+
     private void executeDownloadTask() {
-        String url = editText.getText().toString().trim();
+        url = editText.getText().toString().trim();
 
         if (TextUtils.isEmpty(url)) {
             editText.setError("Please enter a url!");
@@ -100,9 +102,11 @@ public class DownloadActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(getVideoId(url))) {
             editText.setError("Wrong url!");
         } else {
-            GetSongMetaData getSongMetaData = new GetSongMetaData();
-            getSongMetaData.setUrl(url);
-            getSongMetaData.execute();
+//            GetSongMetaData getSongMetaData = new GetSongMetaData();
+//            getSongMetaData.setUrl(url);
+            new GetSongMetaData().execute();
+
+//            new GetSongMetaData().setUrl("");
 
 //                    Toast.makeText(DownloadActivity.this, getVideoId(url), Toast.LENGTH_SHORT).show();
 
@@ -111,15 +115,15 @@ public class DownloadActivity extends AppCompatActivity {
 
     private class GetSongMetaData extends AsyncTask<String, Void, String> {
 
-        private String url;
+        //        private String url;
         private String error = null;
         private String songName, songAlbumName, songCoverUrl;
         private ProgressDialog progressDialog;
 
 
-        public void setUrl(String url) {
-            this.url = url;
-        }
+//        public void setUrl(String url) {
+//            this.url = url;
+//        }
 
 
         @Override
@@ -136,10 +140,10 @@ public class DownloadActivity extends AppCompatActivity {
         protected String doInBackground(String... strings) {
             HttpHandler sh = new HttpHandler();
 
-            String url = "https://www.youtube.com/oembed?format=json&url=" + this.url;//https://www.youtube.com/watch?v=" + id;
+            String urlYT = "https://www.youtube.com/oembed?format=json&url=" + url;//https://www.youtube.com/watch?v=" + id;
 
             // Making a request to url and getting response
-            String jsonStr = sh.makeServiceCall(url);
+            String jsonStr = sh.makeServiceCall(urlYT);
 
             Log.e(TAG, "Response from url: " + jsonStr);
 
