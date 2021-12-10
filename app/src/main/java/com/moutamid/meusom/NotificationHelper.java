@@ -81,16 +81,22 @@ public class NotificationHelper extends ContextWrapper {
 
     Bitmap bitmap;
 
-    public void sendDownloadingNotification(String title, String body, String url) {
+    public void sendDownloadingNotification(String title, String body) {
 //    public void sendHighPriorityNotification(String title, String body, Class activityName) {
 
         Intent intent = new Intent(this, CommandExampleActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 267, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+        int iconN = R.drawable.donwloadtrack;
+
+        if (body.equals("Download Completed!")){
+            iconN = R.drawable.off_track;
+        }
+
         Notification notification = new NotificationCompat.Builder(base1, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(body)
-                .setSmallIcon(R.drawable.donwloadtrack)
+                .setSmallIcon(iconN)
 //                .setLargeIcon(resource)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
 //                .setPriority(NotificationCompat.PRIORITY_HIGH)

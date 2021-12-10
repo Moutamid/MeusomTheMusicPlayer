@@ -94,7 +94,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                         if (isInBackground) {
                             NotificationHelper helper = new NotificationHelper(context);
                             helper.sendDownloadingNotification(currentDownloadName,
-                                    progress + "% (ETA " + etaInSeconds + " seconds)", currentDownloadUrl);
+                                    progress + "% (ETA " + etaInSeconds + " seconds)");
                         }
                     }
             );
@@ -417,7 +417,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
         holder.downloadStatus.setText("Starting download...");
         if (isInBackground)
-            helper.sendDownloadingNotification(holder.songName.getText().toString(), "Starting download...", currentDownloadUrl);
+            helper.sendDownloadingNotification(holder.songName.getText().toString(), "Starting download...");
 
         tvCommandStatus = holder.downloadStatus;
 
@@ -431,7 +431,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                     tvCommandStatus.setText(Constants.COMPLETED);
                     tvCommandOutput.setText(youtubeDLResponse.getOut());
                     if (isInBackground)
-                        helper.sendDownloadingNotification(holder.songName.getText().toString(), "Download Completed!", currentDownloadUrl);
+                        helper.sendDownloadingNotification(holder.songName.getText().toString(), "Download Completed!");
                     String outputStr = youtubeDLResponse.getOut();
                     extractNewNameAndUpload(outputStr, holder, songPushKey);
                     holder.downloadButton.setImageResource(R.drawable.off_track);

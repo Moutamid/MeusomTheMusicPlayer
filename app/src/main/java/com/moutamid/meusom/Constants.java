@@ -24,4 +24,8 @@ public class Constants {
     public static final String FROM_INTENT = "from_intent";
     public static final String LAST_SONG_INDEX = "lastsongindex";
 
+    public static final String YT_URL = "yt_url";
+    public static final String PUSH_KEY = "push_key";
+    public static final String NULL = "null";
+    public static final String TITLE = "title";
 }

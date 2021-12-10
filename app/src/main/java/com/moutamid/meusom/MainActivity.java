@@ -563,6 +563,8 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 
     }
 
+    boolean firstTime = true;
+
     //-----------------------------------------------------
     private void getSongsList() {
         databaseReference.child(Constants.SONGS)
@@ -587,21 +589,24 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 
                         }
 
-                        // PLAYLIST LOADED
-                        // By default play first song
-                        currentSongIndex = utils.getStoredInteger(MainActivity.this, Constants.LAST_SONG_INDEX);
-                        playSong(currentSongIndex);
+                        if (firstTime) {
 
-                        // check for already playing
-                        if (mp.isPlaying()) {
-                            if (mp != null) {
-                                mp.pause();
-                                // Changing button image to play button
-                                btnPlay.setImageResource(R.drawable.play);
-                                btnPlaySmall.setImageResource(R.drawable.play);
+                            // PLAYLIST LOADED
+                            // By default play first song
+                            currentSongIndex = utils.getStoredInteger(MainActivity.this, Constants.LAST_SONG_INDEX);
+                            playSong(currentSongIndex);
+
+                            // check for already playing
+                            if (mp.isPlaying()) {
+                                if (mp != null) {
+                                    mp.pause();
+                                    // Changing button image to play button
+                                    btnPlay.setImageResource(R.drawable.play);
+                                    btnPlaySmall.setImageResource(R.drawable.play);
+                                }
                             }
+                            firstTime = false;
                         }
-
 //                        Toast.makeText(context, "Playlist loaded! You can now tap on the play button to play your music!", Toast.LENGTH_LONG).show();
                     }
 
