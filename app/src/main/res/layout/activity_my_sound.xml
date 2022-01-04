@@ -37,6 +37,16 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:id="@+id/searchBtnMySOund"
+            android:visibility="gone"
+            android:layout_marginEnd="20dp"
+            android:src="@drawable/ic_baseline_search_24" />
+
     </RelativeLayout>
 
     <com.google.android.material.tabs.TabLayout

@@ -1,6 +1,7 @@
 package com.moutamid.meusom;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 import androidx.viewpager.widget.ViewPager;
 
 import android.content.Context;
@@ -39,11 +40,13 @@ public class MySoundActivity extends AppCompatActivity {
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tabLayoutMySound);
         tabLayout.setupWithViewPager(viewPager);
 
+
     }
 
     public void setupViewPager(ViewPager viewPager) {
 
         SectionsPageAdapter adapter = new SectionsPageAdapter(getSupportFragmentManager());
+
         adapter.addFragment(new TracksFragment(), "Tracks");
         adapter.addFragment(new AlbumFragment(), "Album");
         adapter.addFragment(new PlaylistFragment(), "Playlist");

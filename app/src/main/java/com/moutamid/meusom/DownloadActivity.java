@@ -184,7 +184,7 @@ public class DownloadActivity extends AppCompatActivity {
             }
 
             Intent intent = new Intent(DownloadActivity.this, CommandExampleActivity.class);
-            intent.putExtra(Constants.URL, url);
+            intent.putExtra(Constants.URL, getVideoId(url));
             intent.putExtra(Constants.SONG_NAME, songName);
             intent.putExtra(Constants.SONG_ALBUM_NAME, songAlbumName);
             intent.putExtra(Constants.SONG_COVER_URL, songCoverUrl);

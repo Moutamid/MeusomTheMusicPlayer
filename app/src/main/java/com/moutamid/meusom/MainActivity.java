@@ -50,6 +50,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Random;
 
@@ -100,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
     private boolean isRepeat = false;
     //    private ArrayList<HashMap<String, String>> songsList = new ArrayList<HashMap<String, String>>();
     private ArrayList<SongModel> songsList = new ArrayList<>();
+    private ArrayList<SongModel> songsListAll = new ArrayList<>();
 //------------------------------------------------------------------------------------
 
     @Override
@@ -230,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 //
 //            @Override
 //            public void onClick(View arg0) {
-//                // get current song position
+        // get current song position
 //                int currentPosition = mp.getCurrentPosition();
 //                // check if seekForward time is lesser than song duration
 //                if(currentPosition + seekForwardTime <= mp.getDuration()){
@@ -429,13 +431,28 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         // INIT VOLUME SEEKBAR
         initVolumeSeekbar();
 
+        /*songTotalDurationLabel.setOnClickListener(view -> {
+            SongModel currentSongModel = songsList.get(currentSongIndex);
+            utils.storeInteger(MainActivity.this,
+                    currentSongModel.getSongPushKey() + Constants.END_INDEX, mp.getCurrentPosition());
+            Toast.makeText(MainActivity.this, "Will end on: " + utilities.milliSecondsToTimer(mp.getCurrentPosition()), Toast.LENGTH_SHORT).show();
+        });
+
+        songCurrentDurationLabel.setOnClickListener(view -> {
+            SongModel currentSongModel = songsList.get(currentSongIndex);
+            utils.storeInteger(MainActivity.this,
+                    currentSongModel.getSongPushKey() + Constants.START_INDEX, mp.getCurrentPosition());
+            Toast.makeText(MainActivity.this, "Will start on: " + utilities.milliSecondsToTimer(mp.getCurrentPosition()), Toast.LENGTH_SHORT).show();
+
+        });*/
+
     }
 
     private void initVolumeSeekbar() {
-        AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         int maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int curVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        SeekBar volControl = (SeekBar)findViewById(R.id.volumeSeekbar);
+        SeekBar volControl = (SeekBar) findViewById(R.id.volumeSeekbar);
         volControl.setMax(maxVolume);
         volControl.setProgress(curVolume);
         volControl.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -577,6 +594,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                         }
 
                         songsList.clear();
+                        songsListAll.clear();
 
                         for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
 
@@ -585,6 +603,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                             if (utils.fileExists(songModel1.getSongName())) {
                                 songModel1.setSongPushKey(dataSnapshot.getKey());
                                 songsList.add(songModel1);
+                                songsListAll.add(songModel1);
                             }
 
                         }
@@ -594,6 +613,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                             // PLAYLIST LOADED
                             // By default play first song
                             currentSongIndex = utils.getStoredInteger(MainActivity.this, Constants.LAST_SONG_INDEX);
+
                             playSong(currentSongIndex);
 
                             // check for already playing
@@ -640,11 +660,56 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == Constants.REQUEST_CODE && resultCode == RESULT_OK) {
-            currentSongIndex = data.getIntExtra(Constants.SONG_INDEX, 0);
+//            currentSongIndex = data.getIntExtra(Constants.SONG_INDEX, 0);
+//            SongModel model = new SongModel();
+//            model.setSongName(data.getStringExtra(Constants.SONG_NAME));
+//            model.setSongAlbumName(data.getStringExtra(Constants.SONG_ALBUM_NAME));
+//            model.setSongPushKey(data.getStringExtra(Constants.PUSH_KEY));
+//            model.setSongCoverUrl(data.getStringExtra(Constants.SONG_COVER_URL));
+//            model.setSongYTUrl(data.getStringExtra(Constants.YT_URL));
+
+            for (int i = 0; i <= songsList.size() - 1; i++) {
+                if (songsList.get(i).getSongPushKey().equals(data.getStringExtra(Constants.PUSH_KEY))) {
+                    currentSongIndex = i;
+                    break;
+                }
+            }
+
             playSong(currentSongIndex);
         }
 
     }
+
+    /*private void sortTheList() {
+        String sortType = utils.getStoredString(MainActivity.this, Constants.SORT);
+
+        if (sortType.equals(Constants.T_ASCENDING)) {
+            Collections.sort(songsList,
+                    (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+        }
+        if (sortType.equals(Constants.T_DESCENDING)) {
+            Collections.sort(songsList,
+                    (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+            Collections.reverse(songsList);
+        }
+        if (sortType.equals(Constants.ALB_ASCENDING)) {
+            Collections.sort(songsList,
+                    (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+        }
+        if (sortType.equals(Constants.ALB_DESCENDING)) {
+            Collections.sort(songsList,
+                    (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+            Collections.reverse(songsList);
+        }
+        if (sortType.equals(Constants.ORIGINAL)) {
+            songsList = songsListAll;
+        }
+        if (sortType.equals(Constants.REVERSED)) {
+            Collections.reverse(songsList);
+        }
+        if (adapter != null)
+            adapter.notifyDataSetChanged();
+    }*/
 
     @Override
     protected void onResume() {
@@ -673,6 +738,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                         }
 
                         songsList.clear();
+                        songsListAll.clear();
 
                         for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
 
@@ -681,6 +747,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
                             if (utils.fileExists(songModel1.getSongName())) {
                                 songModel1.setSongPushKey(dataSnapshot.getKey());
                                 songsList.add(songModel1);
+                                songsListAll.add(songModel1);
                             }
 
                         }
@@ -745,6 +812,12 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             mp.prepare();
             mp.start();
 
+            /*int startIndex = utils.getStoredInteger(MainActivity.this,
+                    currentSongModel.getSongPushKey() + Constants.START_INDEX);
+            if (startIndex != 0) {
+                mp.seekTo(startIndex);
+            }*/
+
             // TITLE BIG PLAYER
             String songTitle = currentSongModel.getSongName();
             songTitleLabel.setText(songTitle);
@@ -795,12 +868,10 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             // Updating progress bar
             updateProgressBar();
 
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+            Log.i(TAG, "playSong: EXCEPTION: " + e.getMessage());
+
         }
     }
 
@@ -878,7 +949,11 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromTouch) {
-
+        /*int endIndex = utils.getStoredInteger(MainActivity.this,
+                songsList.get(currentSongIndex).getSongPushKey() + Constants.END_INDEX);
+        if (endIndex != 0 && progress >= endIndex) {
+            mp.seekTo(mp.getDuration());
+        }*/
     }
 
     /**
@@ -903,6 +978,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         mp.seekTo(currentPosition);
 
         // update timer progress again
+
         updateProgressBar();
     }
 
@@ -924,16 +1000,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
             currentSongIndex = rand.nextInt((songsList.size() - 1) - 0 + 1) + 0;
             playSong(currentSongIndex);
         } else {
-            // no repeat or shuffle ON - play next song
-            /*if (currentSongIndex < (songsList.size() - 1)) {
-                playSong(currentSongIndex + 1);
-                currentSongIndex = currentSongIndex + 1;
-            } else {
-                // play first song
-                playSong(0);
-                currentSongIndex = 0;
-            }*/
-
             if (currentSongIndex > 0) {
                 playSong(currentSongIndex - 1);
                 currentSongIndex = currentSongIndex - 1;

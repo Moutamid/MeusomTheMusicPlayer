@@ -120,6 +120,10 @@ public class YourService extends Service {
 
         NotificationHelper helper = new NotificationHelper(context);
 
+        if (!songYTUrll.contains("http")) {
+            songYTUrll = "https://www.youtube.com/watch?v=" + songYTUrll;
+        }
+
 //        String command = "--extract-audio --audio-format mp3 -o /sdcard/Download/Meusom./%(title)s.%(ext)s " + songYTUrll;
         String command = "--extract-audio --audio-format mp3 -o " + new Utils().getPath() + "%(title)s.%(ext)s " + songYTUrll;
 

@@ -211,8 +211,11 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
             SongModel model = songModelArrayList.get(position);
 
+            Log.i(TAG, "onBindViewHolder: getSongYTUrl: " + model.getSongYTUrl());
+            
             holder.songName.setText(model.getSongName());
-            holder.songAlbumName.setText(model.getSongAlbumName());
+//            holder.songAlbumName.setText(model.getSongAlbumName());
+            holder.songAlbumName.setVisibility(View.GONE);
 
             with(context)
                     .asBitmap()
@@ -226,7 +229,8 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
             if (utils.fileExists(model.getSongName())) {
                 holder.downloadStatus.setText(Constants.COMPLETED);
-                holder.downloadButton.setImageResource(R.drawable.off_track);
+                holder.downloadButton.setVisibility(View.GONE);
+//                holder.downloadButton.setImageResource(R.drawable.off_track);
             } else {
                 holder.downloadStatus.setText(Constants.NOT_DOWNLOADED);
                 holder.downloadButton.setImageResource(R.drawable.donwloadtrack);
@@ -392,6 +396,10 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             return;
         }
 
+        if (!songYTUrll.contains("http")) {
+            songYTUrll = "https://www.youtube.com/watch?v=" + songYTUrll;
+        }
+
 //        String command = "--extract-audio --audio-format mp3 -o /sdcard/Download/Meusom./%(title)s.%(ext)s " + songYTUrll;
         String command = "--extract-audio --audio-format mp3 -o " + utils.getPath() + "%(title)s.%(ext)s " + songYTUrll;
 //        String command = etCommand.getText().toString().trim();
@@ -434,6 +442,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                         helper.sendDownloadingNotification(holder.songName.getText().toString(), "Download Completed!");
                     String outputStr = youtubeDLResponse.getOut();
                     extractNewNameAndUpload(outputStr, holder, songPushKey);
+//                    holder.downloadButton.setImageResource(0);
                     holder.downloadButton.setImageResource(R.drawable.off_track);
                     Toast.makeText(CommandExampleActivity.this, "Download successful", Toast.LENGTH_LONG).show();
                     running = false;

@@ -164,7 +164,7 @@ public class MainActivity2 extends AppCompatActivity {
             String key = databaseReference.child(Constants.SONGS)
                     .child(auth.getCurrentUser().getUid()).push().getKey();
 
-            songModel.setSongYTUrl(url);
+            songModel.setSongYTUrl(getVideoId(url));
             songModel.setSongName(songName);
             songModel.setSongAlbumName(songAlbumName);
             songModel.setSongCoverUrl(songCoverUrl);

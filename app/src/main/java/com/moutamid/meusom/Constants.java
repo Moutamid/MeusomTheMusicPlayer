@@ -28,4 +28,13 @@ public class Constants {
     public static final String PUSH_KEY = "push_key";
     public static final String NULL = "null";
     public static final String TITLE = "title";
+    public static final String SORT = "sort";
+    public static final String REVERSED = "reversed";
+    public static final String ORIGINAL = "original";
+    public static final String ALB_DESCENDING = "alb_descending";
+    public static final String ALB_ASCENDING = "alb_ascending";
+    public static final String T_DESCENDING = "t_descending";
+    public static final String T_ASCENDING = "t_ascending";
+//    public static final String START_INDEX = "start_index";
+//    public static final String END_INDEX = "end_index";
 }

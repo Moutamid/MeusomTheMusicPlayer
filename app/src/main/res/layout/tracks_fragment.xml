@@ -10,6 +10,52 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            >
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_toStartOf="@id/sortBtnTracks"
+                android:layout_height="40dp"
+                android:id="@+id/searchLayoutTracks"
+                android:layout_margin="20dp"
+                android:background="@drawable/downloadedittextbg">
+
+                <EditText
+                    android:id="@+id/searchEditTextTracks"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:layout_toStartOf="@id/crossBtnTracks"
+                    android:inputType="text"
+                    android:paddingStart="20dp"
+                    android:textColor="@color/black" />
+
+                <ImageView
+                    android:id="@+id/crossBtnTracks"
+                    android:layout_width="30dp"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginEnd="10dp"
+                    android:rotation="180"
+                    android:src="@drawable/ic_baseline_close_24" />
+
+
+            </RelativeLayout>
+
+            <ImageView
+                android:id="@+id/sortBtnTracks"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="20dp"
+                android:layout_centerVertical="true"
+                android:layout_alignParentEnd="true"
+                android:src="@drawable/ic_baseline_sort_24" />
+
+        </RelativeLayout>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/tracksRecyclerView"
             android:layout_width="match_parent"

@@ -69,10 +69,10 @@
             android:background="@drawable/downloadedittextbg">
 
             <EditText
+                android:id="@+id/edittextdownload"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_toStartOf="@id/ajgh"
-                android:id="@+id/edittextdownload"
                 android:background="@android:color/transparent"
                 android:inputType="text"
                 android:paddingStart="20dp"

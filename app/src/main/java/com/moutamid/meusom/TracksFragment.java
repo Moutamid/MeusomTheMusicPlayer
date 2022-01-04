@@ -5,9 +5,16 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Property;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -15,6 +22,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
 import androidx.media2.widget.VideoView;
 import androidx.recyclerview.widget.DividerItemDecoration;
@@ -31,6 +39,8 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import static android.app.Activity.RESULT_OK;
 import static android.view.View.GONE;
@@ -48,6 +58,7 @@ public class TracksFragment extends Fragment {
     private FirebaseAuth auth = FirebaseAuth.getInstance();
 
     private ArrayList<SongModel> songModelArrayList = new ArrayList<>();
+    private ArrayList<SongModel> songModelArrayListAll = new ArrayList<>();
 
     private RecyclerView conversationRecyclerView;
     private RecyclerViewAdapterMessages adapter;
@@ -58,22 +69,103 @@ public class TracksFragment extends Fragment {
         Context context = getActivity();
 
         if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.ENGLISH)) {
-            utils.changeLanguage(context,"en");
+            utils.changeLanguage(context, "en");
         } else if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.PORTUGUESE)) {
-            utils.changeLanguage(context,"pr");
+            utils.changeLanguage(context, "pr");
         }
 
-        View view = inflater.inflate(R.layout.tracks_fragment, container, false);
+        view = inflater.inflate(R.layout.tracks_fragment, container, false);
 
         initRecyclerView(view);
+
+        EditText searchEt = view.findViewById(R.id.searchEditTextTracks);
+        view.findViewById(R.id.crossBtnTracks).setOnClickListener(view1 -> {
+            searchEt.setText("");
+        });
+        searchEt.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                adapter.getFilter().filter(charSequence);
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+
+        view.findViewById(R.id.sortBtnTracks).setOnClickListener(view1 -> {
+            PopupMenu popupMenu = new PopupMenu(requireContext(), view.findViewById(R.id.sortBtnTracks));
+            popupMenu.getMenuInflater().inflate(
+                    R.menu.popup_menu_options,
+                    popupMenu.getMenu()
+            );
+            popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(MenuItem menuItem) {
+                    String sortType = "null";
+                    if (menuItem.getItemId() == R.id.titleAscending) {
+                        Collections.sort(songModelArrayList,
+                                (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+                        sortType = Constants.T_ASCENDING;
+                    }
+                    if (menuItem.getItemId() == R.id.titleDescending) {
+                        Collections.sort(songModelArrayList,
+                                (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+                        Collections.reverse(songModelArrayList);
+                        sortType = Constants.T_DESCENDING;
+                    }
+                    if (menuItem.getItemId() == R.id.albumAscending) {
+                        Collections.sort(songModelArrayList,
+                                (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+                        sortType = Constants.ALB_ASCENDING;
+                    }
+                    if (menuItem.getItemId() == R.id.albumDescending) {
+                        Collections.sort(songModelArrayList,
+                                (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+                        Collections.reverse(songModelArrayList);
+                        sortType = Constants.ALB_DESCENDING;
+                    }
+                    if (menuItem.getItemId() == R.id.originalOrder) {
+                        songModelArrayList = songModelArrayListAll;
+                        sortType = Constants.ORIGINAL;
+                    }
+                    if (menuItem.getItemId() == R.id.reverseOrder) {
+                        Collections.reverse(songModelArrayList);
+                        sortType = Constants.REVERSED;
+                    }
+                    adapter.notifyDataSetChanged();
+
+                    utils.storeString(requireContext(), Constants.SORT, sortType);
+
+                    return true;
+                }
+            });
+            popupMenu.show();
+        });
 
         return view;
     }
 
+    View view;
+
+    /*public void showTracksSearchBar() {
+        view.findViewById(R.id.searchLayoutTracks).setVisibility(View.VISIBLE);
+    }
+
+    public void hideTracksSearchBar() {
+        view.findViewById(R.id.searchLayoutTracks).setVisibility(GONE);
+    }*/
+
     private void initRecyclerView(View view) {
 
         conversationRecyclerView = view.findViewById(R.id.tracksRecyclerView);
-        conversationRecyclerView.addItemDecoration(new DividerItemDecoration(conversationRecyclerView.getContext(), DividerItemDecoration.VERTICAL));
+//        conversationRecyclerView.addItemDecoration(new DividerItemDecoration(conversationRecyclerView.getContext(), DividerItemDecoration.VERTICAL));
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         linearLayoutManager.setReverseLayout(true);
@@ -92,6 +184,7 @@ public class TracksFragment extends Fragment {
                         }
 
                         songModelArrayList.clear();
+                        songModelArrayListAll.clear();
 
                         for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
 
@@ -101,8 +194,11 @@ public class TracksFragment extends Fragment {
 
                                 songModel1.setSongPushKey(dataSnapshot.getKey());
                                 songModelArrayList.add(songModel1);
+                                songModelArrayListAll.add(songModel1);
                             }
                         }
+
+                        sortTheList();
 
                         adapter = new RecyclerViewAdapterMessages();
                         conversationRecyclerView.setAdapter(adapter);
@@ -115,9 +211,37 @@ public class TracksFragment extends Fragment {
                 });
 
     }
+    private void sortTheList() {
+        String sortType = utils.getStoredString(requireContext(), Constants.SORT);
 
+        if (sortType.equals(Constants.T_ASCENDING)) {
+            Collections.sort(songModelArrayList,
+                    (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+        }
+        if (sortType.equals(Constants.T_DESCENDING)) {
+            Collections.sort(songModelArrayList,
+                    (songModel, t1) -> songModel.getSongName().compareTo(t1.getSongName()));
+            Collections.reverse(songModelArrayList);
+        }
+        if (sortType.equals(Constants.ALB_ASCENDING)) {
+            Collections.sort(songModelArrayList,
+                    (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+        }
+        if (sortType.equals(Constants.ALB_DESCENDING)) {
+            Collections.sort(songModelArrayList,
+                    (songModel, t1) -> songModel.getSongAlbumName().compareTo(t1.getSongAlbumName()));
+            Collections.reverse(songModelArrayList);
+        }
+        if (sortType.equals(Constants.ORIGINAL)) {
+            songModelArrayList = songModelArrayListAll;
+        }
+        if (sortType.equals(Constants.REVERSED)) {
+            Collections.reverse(songModelArrayList);
+        }
+
+    }
     private class RecyclerViewAdapterMessages extends RecyclerView.Adapter
-            <RecyclerViewAdapterMessages.ViewHolderRightMessage> {
+            <RecyclerViewAdapterMessages.ViewHolderRightMessage> implements Filterable {
 
         @NonNull
         @Override
@@ -152,7 +276,12 @@ public class TracksFragment extends Fragment {
                     utils.storeBoolean(getActivity(), Constants.IS_PLAYLIST, false);
 
                     Intent intent = getActivity().getIntent();
-                    intent.putExtra(Constants.SONG_INDEX, position);
+//                    intent.putExtra(Constants.SONG_INDEX, position);
+//                    intent.putExtra(Constants.SONG_NAME, model.getSongName());
+//                    intent.putExtra(Constants.SONG_ALBUM_NAME, model.getSongAlbumName());
+//                    intent.putExtra(Constants.SONG_COVER_URL, model.getSongCoverUrl());
+//                    intent.putExtra(Constants.YT_URL, model.getSongYTUrl());
+                    intent.putExtra(Constants.PUSH_KEY, model.getSongPushKey());
                     getActivity().setResult(RESULT_OK, intent);
                     getActivity().finish();
 
@@ -228,6 +357,41 @@ public class TracksFragment extends Fragment {
             if (songModelArrayList == null)
                 return 0;
             return songModelArrayList.size();
+        }
+
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence charSequence) {
+                    String key = charSequence.toString();
+                    if (key.isEmpty()) {
+                        songModelArrayList = songModelArrayListAll;
+                    } else {
+                        ArrayList<SongModel> filtered = new ArrayList<>();
+
+                        for (SongModel model : songModelArrayListAll) {
+                            if (model.getSongName().toLowerCase().contains(key.toLowerCase())) {
+                                filtered.add(model);
+                            } else if (model.getSongAlbumName().toLowerCase().contains(key.toLowerCase())) {
+                                filtered.add(model);
+                            } else if (model.getSongYTUrl().toLowerCase().contains(key.toLowerCase())) {
+                                filtered.add(model);
+                            }
+                        }
+                        songModelArrayList = filtered;
+                    }
+                    FilterResults filterResults = new FilterResults();
+                    filterResults.values = songModelArrayList;
+                    return filterResults;
+                }
+
+                @Override
+                protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+                    songModelArrayList = (ArrayList<SongModel>) filterResults.values;
+                    adapter.notifyDataSetChanged();
+                }
+            };
         }
 
         public class ViewHolderRightMessage extends RecyclerView.ViewHolder {

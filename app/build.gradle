@@ -6,7 +6,7 @@ apply plugin: 'com.google.firebase.crashlytics'
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
-
+//    useLibrary 'org.apache.http.legacy'
     defaultConfig {
         applicationId "com.moutamid.meusom"
         minSdkVersion 21
@@ -92,12 +92,15 @@ dependencies {
     implementation 'com.facebook.android:audience-network-sdk:6.2.0'
     implementation 'com.google.android.gms:play-services-ads:19.6.0'
 
-    def work_version = "1.0.0-alpha04"
+//    def work_version = "1.0.0-alpha04"
 
-    implementation "android.arch.work:work-runtime:1.0.1" // use -ktx for Kotlin
+//    implementation "android.arch.work:work-runtime:1.0.1" // use -ktx for Kotlin
 
     // optional - Firebase JobDispatcher support
-    implementation "android.arch.work:work-firebase:1.0.0-alpha11"
+//    implementation "android.arch.work:work-firebase:1.0.0-alpha11"
 //    implementation "android.arch.work:work-firebase:$work_version"
+
+//    implementation 'com.android.volley:volley:1.1.1'
+//    implementation 'com.google.code.gson:gson:2.8.7'
 
 }
