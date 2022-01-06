@@ -10,6 +10,9 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.io.File;
 import java.util.Calendar;
 import java.util.Locale;
@@ -22,6 +25,12 @@ public class Utils {
     private static final String PACKAGE_NAME = "dev.moutamid.meusom";
 
     private SharedPreferences sharedPreferences;
+
+    public static DatabaseReference databaseReference() {
+        DatabaseReference databaseReference1 = FirebaseDatabase.getInstance().getReference();
+        databaseReference1.keepSynced(true);
+        return databaseReference1;
+    }
 
     public void removeSharedPref(Context context) {
         sharedPreferences = context.getSharedPreferences(PACKAGE_NAME, Context.MODE_PRIVATE);

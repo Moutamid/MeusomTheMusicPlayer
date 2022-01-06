@@ -23,7 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
+
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
@@ -35,7 +35,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Context context = SettingsActivity.this;
     private Utils utils = new Utils();
 
-    private DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+
     private FirebaseAuth mAuth = FirebaseAuth.getInstance();
 
     private LinearLayout optionsLayout;
@@ -158,7 +158,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void getUsedSpace() {
-        databaseReference.child(Constants.SONGS)
+         Utils.databaseReference().child(Constants.SONGS)
                 .child(mAuth.getCurrentUser().getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override

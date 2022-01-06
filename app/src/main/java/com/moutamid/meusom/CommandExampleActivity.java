@@ -34,7 +34,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
+
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.yausername.youtubedl_android.DownloadProgressCallback;
@@ -102,7 +102,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
     };
 
     private SongModel songModel = new SongModel();
-    private DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+
     private FirebaseAuth auth = FirebaseAuth.getInstance();
 
 //    private String YTUrl;
@@ -126,7 +126,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             songModel.setSongCoverUrl(getIntent().getStringExtra(Constants.SONG_COVER_URL));
             isIntent = getIntent().getBooleanExtra(Constants.FROM_INTENT, false);
 
-            databaseReference.child(Constants.SONGS)
+            Utils.databaseReference().child(Constants.SONGS)
                     .child(auth.getCurrentUser().getUid()).push()
                     .setValue(songModel).addOnCompleteListener(new OnCompleteListener<Void>() {
                 @Override
@@ -158,8 +158,9 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
         conversationRecyclerView.setNestedScrollingEnabled(false);
+        conversationRecyclerView.setItemViewCacheSize(20);
 
-        databaseReference.child(Constants.SONGS)
+        Utils.databaseReference().child(Constants.SONGS)
                 .child(auth.getCurrentUser().getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -178,10 +179,12 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
                         }
 
-//                        Toast.makeText(context, songModelArrayList.size() + "", Toast.LENGTH_SHORT).show();
-
                         adapter = new RecyclerViewAdapterMessages();
                         conversationRecyclerView.setAdapter(adapter);
+
+                        TextView tv = findViewById(R.id.songCountTextView);
+                        tv.setText("(" + songModelArrayList.size() + ")");
+
                     }
 
                     @Override
@@ -212,7 +215,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             SongModel model = songModelArrayList.get(position);
 
             Log.i(TAG, "onBindViewHolder: getSongYTUrl: " + model.getSongYTUrl());
-            
+
             holder.songName.setText(model.getSongName());
 //            holder.songAlbumName.setText(model.getSongAlbumName());
             holder.songAlbumName.setVisibility(View.GONE);
@@ -282,20 +285,32 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                     new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
-
-                            databaseReference.child(Constants.SONGS)
-                                    .child(auth.getCurrentUser().getUid())
-                                    .child(model.getSongPushKey())
-                                    .removeValue();
-
-                            File fdelete = new File(utils.getSongPath(model.getSongName()));
-                            if (fdelete.exists()) {
-                                if (fdelete.delete()) {
-                                    Toast.makeText(context, "File Deleted", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-
                             dialogInterface.dismiss();
+                            utils.showDialog(context,
+                                    "Choose",
+                                    "Do you want to retain data?",
+                                    "Delete file",
+                                    "Delete(File+Data)",
+                                    (dialogInterface1, i1) -> {
+                                        Utils.databaseReference().child(Constants.SONGS)
+                                                .child(auth.getCurrentUser().getUid())
+                                                .child(model.getSongPushKey())
+                                                .removeValue();
+                                        dialogInterface1.dismiss();
+                                    }, (dialogInterface12, i12) -> {
+                                        Utils.databaseReference().child(Constants.SONGS)
+                                                .child(auth.getCurrentUser().getUid())
+                                                .child(model.getSongPushKey())
+                                                .removeValue();
+
+                                        File fdelete = new File(utils.getSongPath(model.getSongName()));
+                                        if (fdelete.exists()) {
+                                            if (fdelete.delete()) {
+                                                Toast.makeText(context, "File Deleted", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                        dialogInterface12.dismiss();
+                                    }, true);
                         }
                     }, new DialogInterface.OnClickListener() {
                         @Override
@@ -473,7 +488,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             urlStr = urlM.group(1);
         }
 
-        databaseReference.child(Constants.SONGS)
+        Utils.databaseReference().child(Constants.SONGS)
                 .child(auth.getCurrentUser().getUid())
                 .child(songPushKey)
                 .child(Constants.SONG_NAME)

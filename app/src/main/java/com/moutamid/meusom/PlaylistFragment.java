@@ -25,7 +25,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
+
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
@@ -35,7 +35,7 @@ import java.util.HashMap;
 public class PlaylistFragment extends Fragment {
     private Utils utils = new Utils();
 
-    private DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+
     private FirebaseAuth auth = FirebaseAuth.getInstance();
 
     private ArrayList<SongModel> currentPlaylistList = new ArrayList<>();
@@ -133,7 +133,7 @@ public class PlaylistFragment extends Fragment {
                 progressDialog.setMessage("Loading...");
                 progressDialog.show();
 
-                databaseReference.child(Constants.PLAYLIST)
+                 Utils.databaseReference().child(Constants.PLAYLIST)
                         .child(auth.getCurrentUser().getUid())
                         .child(Constants.NAME)
                         .push()
@@ -142,7 +142,7 @@ public class PlaylistFragment extends Fragment {
 
                 for (int i = 0; i <= currentPlaylistList.size() - 1; i++) {
 
-                    databaseReference.child(Constants.PLAYLIST)
+                     Utils.databaseReference().child(Constants.PLAYLIST)
                             .child(auth.getCurrentUser().getUid())
                             .child(namee)
                             .child(currentPlaylistList.get(i).getSongPushKey())
@@ -159,7 +159,7 @@ public class PlaylistFragment extends Fragment {
     }
 
     private void getAllTracks() {
-        databaseReference.child(Constants.SONGS)
+         Utils.databaseReference().child(Constants.SONGS)
                 .child(auth.getCurrentUser().getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -207,6 +207,7 @@ public class PlaylistFragment extends Fragment {
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
         conversationRecyclerView.setNestedScrollingEnabled(false);
+        conversationRecyclerView.setItemViewCacheSize(20);
 
         conversationRecyclerView.setAdapter(adapter);
 
@@ -271,7 +272,7 @@ public class PlaylistFragment extends Fragment {
     //------------------------------------------------------------------------
 
     private void getAllPlaylists() {
-        databaseReference.child(Constants.PLAYLIST)
+         Utils.databaseReference().child(Constants.PLAYLIST)
                 .child(auth.getCurrentUser().getUid())
                 .child(Constants.NAME)
                 .addValueEventListener(new ValueEventListener() {

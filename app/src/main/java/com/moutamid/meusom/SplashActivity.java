@@ -1,14 +1,45 @@
 package com.moutamid.meusom;
 
+import static com.google.firebase.auth.FirebaseAuth.getInstance;
+
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SplashActivity extends AppCompatActivity {
     private Context context = SplashActivity.this;
@@ -21,16 +52,14 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
 
-//        fillArrayList();
+        doWorkOfSplashScreen();
 
 //        new GetSongMetaData().execute();
-
-        doWorkOfSplashScreen();
 
     }
 
     private void doWorkOfSplashScreen() {
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        FirebaseAuth mAuth = getInstance();
 
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -50,6 +79,796 @@ public class SplashActivity extends AppCompatActivity {
                 }
             }
         }, 500);
+    }
+
+    private class GetSongMetaData extends AsyncTask<String, Void, String> {
+
+        //        private String url;
+//        private String error = null;
+//        private String songName, songAlbumName, songCoverUrl;
+        private ProgressDialog progressDialog;
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+        FirebaseAuth mAuth = getInstance();
+
+        ArrayList<String> nullList = new ArrayList<>();
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progressDialog = new ProgressDialog(context);
+            progressDialog.setCancelable(false);
+            progressDialog.setMessage("Please wait...");
+            progressDialog.show();
+        }
+
+        private void updateProgress(String msg) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressDialog.setMessage(msg);
+                }
+            });
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            HttpHandler sh = new HttpHandler();
+
+            fillUpArrayList();
+
+            for (int i = 28; i <= songLinksList.size() - 1; i++) {
+                Log.i(TAG, "doInBackground: index: " + i);
+                String urlYT = "https://www.youtube.com/oembed?format=json&url=" + songLinksList.get(i);//https://www.youtube.com/watch?v=" + id;
+
+                String jsonStr = sh.makeServiceCall(urlYT);
+
+                if (jsonStr != null) {
+                    try {
+                        JSONObject o = new JSONObject(jsonStr);
+
+                        SongModel songModel = new SongModel();
+
+                        songModel.setSongYTUrl(getVideoId(songLinksList.get(i)));
+                        songModel.setSongName(o.getString("title"));
+                        songModel.setSongAlbumName(o.getString("author_name"));
+                        songModel.setSongCoverUrl(o.getString("thumbnail_url"));
+
+                        Log.i(TAG, "doInBackground: getterSuccess: " + o.getString("title") + " id: " + getVideoId(songLinksList.get(i)));
+
+                        Utils.databaseReference().child(Constants.SONGS)
+                                .child(mAuth.getCurrentUser().getUid()).push()
+                                .setValue(songModel);
+                        updateProgress("Please wait... " + i);
+
+                    } catch (final JSONException e) {
+                        Log.e(TAG, "ERROR AT: " + i + " (" + getVideoId(songLinksList.get(i)) + ")");
+                        Log.e(TAG, "ERROR MSG: " + e.getMessage());
+                        nullList.add(getVideoId(songLinksList.get(i)));
+//                        return "";
+                    }
+                } else {
+                    Log.e(TAG, "ERROR AT: " + i + " (" + getVideoId(songLinksList.get(i)) + ")");
+                    Log.e(TAG, "ERROR MSG: jsonStr IS NULL");
+                    nullList.add(getVideoId(songLinksList.get(i)));
+//                    return "";
+                }
+                Log.e(TAG, "ERROR LIST: " + nullList.toString());
+                //E/SplashActivity: ERROR AT: 28 (fzzxd2NvwHA)
+                //E/SplashActivity: ERROR MSG: jsonStr IS NULL
+                //E/SplashActivity: ERROR AT: 50 (2rFcW75NyqI)
+                //E/SplashActivity: ERROR MSG: jsonStr IS NULL
+                //E/SplashActivity: ERROR AT: 176 (xf5rgfur4gw)
+                //E/SplashActivity: ERROR MSG: jsonStr IS NULL
+                //E/SplashActivity: ERROR AT: 453 (vIyP_joi3AI)
+                //E/SplashActivity: ERROR MSG: jsonStr IS NULL
+                //E/SplashActivity: ERROR AT: 556 (ifCAfAzOBJM)
+                //E/SplashActivity: ERROR MSG: jsonStr IS NULL
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+
+            progressDialog.dismiss();
+
+        }
+    }
+
+    private static class HttpHandler {
+
+        public HttpHandler() {
+        }
+
+        public String makeServiceCall(String reqUrl) {
+            String response = null;
+            try {
+                URL url = new URL(reqUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                // read the response
+                InputStream in = new BufferedInputStream(conn.getInputStream());
+
+                response = convertStreamToString(in);
+            } catch (MalformedURLException e) {
+                Log.e(TAG, "MalformedURLException: " + e.getMessage());
+            } catch (ProtocolException e) {
+                Log.e(TAG, "ProtocolException: " + e.getMessage());
+            } catch (IOException e) {
+                Log.e(TAG, "IOException: " + e.getMessage());
+            } catch (Exception e) {
+                Log.e(TAG, "Exception: " + e.getMessage());
+            }
+            return response;
+        }
+
+        private String convertStreamToString(InputStream is) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            StringBuilder sb = new StringBuilder();
+
+            String line;
+            try {
+
+                while ((line = reader.readLine()) != null) {
+
+                    sb.append(line).append('\n');
+
+                }
+
+            } catch (IOException e) {
+
+                e.printStackTrace();
+
+            } finally {
+
+                try {
+
+                    is.close();
+
+                } catch (IOException e) {
+
+                    e.printStackTrace();
+                }
+            }
+
+            return sb.toString();
+        }
+    }
+
+    private static String getVideoId(@NonNull String videoUrl) {
+        String videoId = "";
+        String regex = "http(?:s)?:\\/\\/(?:m.)?(?:www\\.)?youtu(?:\\.be\\/|be\\.com\\/(?:watch\\?(?:feature=youtu.be\\&)?v=|v\\/|embed\\/|user\\/(?:[\\w#]+\\/)+))([^&#?\\n]+)";
+        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(videoUrl);
+        if (matcher.find()) {
+            videoId = matcher.group(1);
+        }
+        return videoId;
+    }
+
+
+    ArrayList<String> songLinksList = new ArrayList<>();
+
+    private void fillUpArrayList() {
+        songLinksList.add("https://www.youtube.com/watch?v=9yfMplVU0m0");
+        songLinksList.add("https://www.youtube.com/watch?v=iLBBRuVDOo4");
+        songLinksList.add("https://www.youtube.com/watch?v=SXiSVQZLje8");
+        songLinksList.add("https://www.youtube.com/watch?v=0n_vz0ddoT8");
+        songLinksList.add("https://www.youtube.com/watch?v=aBn7bjy9c4U");
+        songLinksList.add("https://www.youtube.com/watch?v=UuCq8mtK8J4");
+        songLinksList.add("https://www.youtube.com/watch?v=EHkozMIXZ8w");
+        songLinksList.add("https://www.youtube.com/watch?v=KgmeL_xuB0I");
+        songLinksList.add("https://www.youtube.com/watch?v=UuCq8mtK8J4");
+        songLinksList.add("https://www.youtube.com/watch?v=HMUDVMiITOU");
+        songLinksList.add("https://www.youtube.com/watch?v=fh78YZ3P6Ys");
+        songLinksList.add("https://www.youtube.com/watch?v=YBsPE6yHH9c");
+        songLinksList.add("https://www.youtube.com/watch?v=g5qU7p7yOY8");
+        songLinksList.add("https://www.youtube.com/watch?v=OfS1jFck8YQ");
+        songLinksList.add("https://www.youtube.com/watch?v=UqON44CLaQM");
+        songLinksList.add("https://www.youtube.com/watch?v=aCH1eyWq9B0");
+        songLinksList.add("https://www.youtube.com/watch?v=BAWJ_6KdkV0");
+        songLinksList.add("https://www.youtube.com/watch?v=Od-6uzcLGqw");
+        songLinksList.add("https://www.youtube.com/watch?v=pxjZM-d_ShI");
+        songLinksList.add("https://www.youtube.com/watch?v=ft4jcPSLJfY");
+        songLinksList.add("https://www.youtube.com/watch?v=GxBSyx85Kp8");
+        songLinksList.add("https://www.youtube.com/watch?v=UqON44CLaQM");
+        songLinksList.add("https://www.youtube.com/watch?v=mywyuiAbww4");
+        songLinksList.add("https://www.youtube.com/watch?v=iS1g8G_njx8");
+        songLinksList.add("https://www.youtube.com/watch?v=ax9ge-ymWIQ");
+        songLinksList.add("https://www.youtube.com/watch?v=9yfMplVU0m0");
+        songLinksList.add("https://www.youtube.com/watch?v=k2qgadSvNyU");
+        songLinksList.add("https://www.youtube.com/watch?v=Hg2Kl04ITxc");
+        songLinksList.add("https://www.youtube.com/watch?v=fzzxd2NvwHA");
+        songLinksList.add("https://www.youtube.com/watch?v=U1ovRUrC9bs");
+        songLinksList.add("https://www.youtube.com/watch?v=sC2nElyx7Ds");
+        songLinksList.add("https://www.youtube.com/watch?v=b8I-7Wk_Vbc");
+        songLinksList.add("https://www.youtube.com/watch?v=iLBBRuVDOo4");
+        songLinksList.add("https://www.youtube.com/watch?v=XCBPKRaJgz4");
+        songLinksList.add("https://www.youtube.com/watch?v=LaVPQe8Zf9o");
+        songLinksList.add("https://www.youtube.com/watch?v=UqON44CLaQM");
+        songLinksList.add("https://www.youtube.com/watch?v=uPHKkewD1G0");
+        songLinksList.add("https://www.youtube.com/watch?v=989-7xsRLR4");
+        songLinksList.add("https://www.youtube.com/watch?v=CfkxLRuSteI");
+        songLinksList.add("https://www.youtube.com/watch?v=sC2nElyx7Ds");
+        songLinksList.add("https://www.youtube.com/watch?v=Zd68AthoNIw");
+        songLinksList.add("https://www.youtube.com/watch?v=kivuDS-6HbQ");
+        songLinksList.add("https://www.youtube.com/watch?v=JGwWNGJdvx8");
+        songLinksList.add("https://www.youtube.com/watch?v=8MkClXv2vKs");
+        songLinksList.add("https://www.youtube.com/watch?v=gmqkCs6Ycoo");
+        songLinksList.add("https://www.youtube.com/watch?v=yJg-Y5byMMw");
+        songLinksList.add("https://www.youtube.com/watch?v=k-TBmwz6GB4");
+        songLinksList.add("https://www.youtube.com/watch?v=zrV5of2p-oc");
+        songLinksList.add("https://www.youtube.com/watch?v=6DtPF9W3ejI");
+        songLinksList.add("https://www.youtube.com/watch?v=yJg-Y5byMMw");
+        songLinksList.add("https://www.youtube.com/watch?v=2rFcW75NyqI");
+        songLinksList.add("https://www.youtube.com/watch?v=MD_C1QVkljk");
+        songLinksList.add("https://www.youtube.com/watch?v=wnJ6LuUFpMo");
+        songLinksList.add("https://www.youtube.com/watch?v=gmqkCs6Ycoo");
+        songLinksList.add("https://www.youtube.com/watch?v=CGyEd0aKWZE");
+        songLinksList.add("https://www.youtube.com/watch?v=DGVghfG1mDk");
+        songLinksList.add("https://www.youtube.com/watch?v=Df2abB1Z-e0");
+        songLinksList.add("https://www.youtube.com/watch?v=-1M5EMtit3k");
+        songLinksList.add("https://www.youtube.com/watch?v=NCclOXqCxA8");
+        songLinksList.add("https://www.youtube.com/watch?v=wnJ6LuUFpMo");
+        songLinksList.add("https://www.youtube.com/watch?v=AJtDXIazrMo");
+        songLinksList.add("https://www.youtube.com/watch?v=Ktv43aUvb1c");
+        songLinksList.add("https://www.youtube.com/watch?v=cJQC8Cn2Dko");
+        songLinksList.add("https://www.youtube.com/watch?v=AJtDXIazrMo");
+        songLinksList.add("https://www.youtube.com/watch?v=xzCEdSKMkdU");
+        songLinksList.add("https://www.youtube.com/watch?v=hsXeFqj5p7Q");
+        songLinksList.add("https://www.youtube.com/watch?v=5x4Lwdkxu0c");
+        songLinksList.add("https://www.youtube.com/watch?v=IcrbM1l_BoI");
+        songLinksList.add("https://www.youtube.com/watch?v=cwLRQn61oUY");
+        songLinksList.add("https://www.youtube.com/watch?v=RgKAFK5djSk");
+        songLinksList.add("https://www.youtube.com/watch?v=P0_vIWWcvNg");
+        songLinksList.add("https://www.youtube.com/watch?v=XVNPdmwOfKI");
+        songLinksList.add("https://www.youtube.com/watch?v=5GL9JoH4Sws");
+        songLinksList.add("https://www.youtube.com/watch?v=2GADx4Hy-Gg");
+        songLinksList.add("https://www.youtube.com/watch?v=LaIEfcUCywk");
+        songLinksList.add("https://www.youtube.com/watch?v=nlcIKh6sBtc");
+        songLinksList.add("https://www.youtube.com/watch?v=y2tEPmwWEiI");
+        songLinksList.add("https://www.youtube.com/watch?v=2GADx4Hy-Gg");
+        songLinksList.add("https://www.youtube.com/watch?v=3PdILZ_1P74");
+        songLinksList.add("https://www.youtube.com/watch?v=jK2aIUmmdP4");
+        songLinksList.add("https://www.youtube.com/watch?v=8fLhBT_6YBk");
+        songLinksList.add("https://www.youtube.com/watch?v=qrO4YZeyl0I");
+        songLinksList.add("https://www.youtube.com/watch?v=B7xai5u_tnk");
+        songLinksList.add("https://www.youtube.com/watch?v=jXQitd7ahV4");
+        songLinksList.add("https://www.youtube.com/watch?v=bESGLojNYSo");
+        songLinksList.add("https://www.youtube.com/watch?v=3nQNiWdeH2Q");
+        songLinksList.add("https://www.youtube.com/watch?v=qrO4YZeyl0I");
+        songLinksList.add("https://www.youtube.com/watch?v=12CeaxLiMgE");
+        songLinksList.add("https://www.youtube.com/watch?v=aBt8fN7mJNg");
+        songLinksList.add("https://www.youtube.com/watch?v=rNsP4nE1_FA");
+        songLinksList.add("https://www.youtube.com/watch?v=5UtOVnsZPF4");
+        songLinksList.add("https://www.youtube.com/watch?v=IoJlIriz1jk");
+        songLinksList.add("https://www.youtube.com/watch?v=VCLxJd1d84s");
+        songLinksList.add("https://www.youtube.com/watch?v=kJQP7kiw5Fk");
+        songLinksList.add("https://www.youtube.com/watch?v=1xwr7Jw-dqM");
+        songLinksList.add("https://www.youtube.com/watch?v=1__CAdTJ5JU");
+        songLinksList.add("https://www.youtube.com/watch?v=Srqs4CitU2U");
+        songLinksList.add("https://www.youtube.com/watch?v=5UtOVnsZPF4");
+        songLinksList.add("https://www.youtube.com/watch?v=Dst9gZkq1a8");
+        songLinksList.add("https://www.youtube.com/watch?v=eIc4mqyN1Q8");
+        songLinksList.add("https://www.youtube.com/watch?v=GGvBZIyTxEI");
+        songLinksList.add("https://www.youtube.com/watch?v=nCS0bC62PjE");
+        songLinksList.add("https://www.youtube.com/watch?v=Zk7Dg30tCDU");
+        songLinksList.add("https://www.youtube.com/watch?v=Zk7Dg30tCDU");
+        songLinksList.add("https://www.youtube.com/watch?v=Zk7Dg30tCDU");
+        songLinksList.add("https://www.youtube.com/watch?v=axySrE0Kg6k");
+        songLinksList.add("https://www.youtube.com/watch?v=3AtDnEC4zak");
+        songLinksList.add("https://www.youtube.com/watch?v=lXX53y9ydos");
+        songLinksList.add("https://www.youtube.com/watch?v=FuXNumBwDOM");
+        songLinksList.add("https://www.youtube.com/watch?v=CwfoyVa980U");
+        songLinksList.add("https://www.youtube.com/watch?v=n1a7o44WxNo");
+        songLinksList.add("https://www.youtube.com/watch?v=IxxstCcJlsc");
+        songLinksList.add("https://www.youtube.com/watch?v=qdpXxGPqW-Y");
+        songLinksList.add("https://www.youtube.com/watch?v=X46t8ZFqUB4");
+        songLinksList.add("https://www.youtube.com/watch?v=AR5ZNqYB69A");
+        songLinksList.add("https://www.youtube.com/watch?v=4cgEOO2viak");
+        songLinksList.add("https://www.youtube.com/watch?v=2i2khp_npdE");
+        songLinksList.add("https://www.youtube.com/watch?v=WA4iX5D9Z64");
+        songLinksList.add("https://www.youtube.com/watch?v=VuNIsY6JdUw");
+        songLinksList.add("https://www.youtube.com/watch?v=nchCX7o7kuE");
+        songLinksList.add("https://www.youtube.com/watch?v=QcIy9NiNbmo");
+        songLinksList.add("https://www.youtube.com/watch?v=3yy-dKTmyOo");
+        songLinksList.add("https://www.youtube.com/watch?v=k_bHd2-QhuQ");
+        songLinksList.add("https://www.youtube.com/watch?v=50VNCymT-Cs");
+        songLinksList.add("https://www.youtube.com/watch?v=tQU9EBhodGA");
+        songLinksList.add("https://www.youtube.com/watch?v=GODUXCWRyVs");
+        songLinksList.add("https://www.youtube.com/watch?v=9PQmIioYedw");
+        songLinksList.add("https://www.youtube.com/watch?v=8SQ8ZJR8opU");
+        songLinksList.add("https://www.youtube.com/watch?v=pvP_OwVSFpk");
+        songLinksList.add("https://www.youtube.com/watch?v=dISNgvVpWlo");
+        songLinksList.add("https://www.youtube.com/watch?v=BQZAvoLixiM");
+        songLinksList.add("https://www.youtube.com/watch?v=3CEg1clLNNM");
+        songLinksList.add("https://www.youtube.com/watch?v=5GL9JoH4Sws");
+        songLinksList.add("https://www.youtube.com/watch?v=FNp8329unFU");
+        songLinksList.add("https://www.youtube.com/watch?v=CBsJGk6upDc");
+        songLinksList.add("https://www.youtube.com/watch?v=y2tEPmwWEiI");
+        songLinksList.add("https://www.youtube.com/watch?v=o9JJvH-vw9A");
+        songLinksList.add("https://www.youtube.com/watch?v=YBHQbu5rbdQ");
+        songLinksList.add("https://www.youtube.com/watch?v=hp_labuiDHY");
+        songLinksList.add("https://www.youtube.com/watch?v=YBHQbu5rbdQ");
+        songLinksList.add("https://www.youtube.com/watch?v=hCiEyDRN3Qc");
+        songLinksList.add("https://www.youtube.com/watch?v=cMg8KaMdDYo");
+        songLinksList.add("https://www.youtube.com/watch?v=nlcIKh6sBtc");
+        songLinksList.add("https://www.youtube.com/watch?v=8uidkYkkNZU");
+        songLinksList.add("https://www.youtube.com/watch?v=8yGKJl_U4Gg");
+        songLinksList.add("https://www.youtube.com/watch?v=3PdILZ_1P74");
+        songLinksList.add("https://www.youtube.com/watch?v=0yW7w8F2TVA");
+        songLinksList.add("https://www.youtube.com/watch?v=gxApr8QnlGY");
+        songLinksList.add("https://www.youtube.com/watch?v=JFcgOboQZ08");
+        songLinksList.add("https://www.youtube.com/watch?v=B7xai5u_tnk");
+        songLinksList.add("https://www.youtube.com/watch?v=jXQitd7ahV4");
+        songLinksList.add("https://www.youtube.com/watch?v=lEi_XBg2Fpk");
+        songLinksList.add("https://www.youtube.com/watch?v=EoCTV78coGE");
+        songLinksList.add("https://www.youtube.com/watch?v=kg1BljLu9YY");
+        songLinksList.add("https://www.youtube.com/watch?v=hNvye5RyVXg");
+        songLinksList.add("https://www.youtube.com/watch?v=v6IAJOOmDMg");
+        songLinksList.add("https://www.youtube.com/watch?v=acvIVA9-FMQ");
+        songLinksList.add("https://www.youtube.com/watch?v=_eQQKVKjifQ");
+        songLinksList.add("https://www.youtube.com/watch?v=n-FVcnbvCJA");
+        songLinksList.add("https://www.youtube.com/watch?v=4DsBbtOwvFo");
+        songLinksList.add("https://www.youtube.com/watch?v=Srqs4CitU2U");
+        songLinksList.add("https://www.youtube.com/watch?v=fHhe--7B7wA");
+        songLinksList.add("https://www.youtube.com/watch?v=4DsBbtOwvFo");
+        songLinksList.add("https://www.youtube.com/watch?v=fHhe--7B7wA");
+        songLinksList.add("https://www.youtube.com/watch?v=acvIVA9-FMQ");
+        songLinksList.add("https://www.youtube.com/watch?v=nCS0bC62PjE");
+        songLinksList.add("https://www.youtube.com/watch?v=GGvBZIyTxEI");
+        songLinksList.add("https://www.youtube.com/watch?v=ixkoVwKQaJg");
+        songLinksList.add("https://www.youtube.com/watch?v=8l75Z8wil_U");
+        songLinksList.add("https://www.youtube.com/watch?v=Zk7Dg30tCDU");
+        songLinksList.add("https://www.youtube.com/watch?v=3zrZE68Qrrg");
+        songLinksList.add("https://www.youtube.com/watch?v=0gg4H180mBk");
+        songLinksList.add("https://www.youtube.com/watch?v=lXX53y9ydos");
+        songLinksList.add("https://www.youtube.com/watch?v=1-xGerv5FOk");
+        songLinksList.add("https://www.youtube.com/watch?v=5hEh9LiSzow");
+        songLinksList.add("https://www.youtube.com/watch?v=XPBwXKgDTdE");
+        songLinksList.add("https://www.youtube.com/watch?v=xf5rgfur4gw");
+        songLinksList.add("https://www.youtube.com/watch?v=yHLtE1wFeRQ");
+        songLinksList.add("https://www.youtube.com/watch?v=nN6VR92V70M");
+        songLinksList.add("https://www.youtube.com/watch?v=jn40gqhxoSY");
+        songLinksList.add("https://www.youtube.com/watch?v=RCaoEIy-sNY");
+        songLinksList.add("https://www.youtube.com/watch?v=BjsjIkSb0cM");
+        songLinksList.add("https://www.youtube.com/watch?v=cMPEd8m79Hw");
+        songLinksList.add("https://www.youtube.com/watch?v=3tmd-ClpJxA");
+        songLinksList.add("https://www.youtube.com/watch?v=nN6VR92V70M");
+        songLinksList.add("https://www.youtube.com/watch?v=8JnfIa84TnU");
+        songLinksList.add("https://www.youtube.com/watch?v=VuNIsY6JdUw");
+        songLinksList.add("https://www.youtube.com/watch?v=YykjpeuMNEk");
+        songLinksList.add("https://www.youtube.com/watch?v=Xlha0OmVCSg");
+        songLinksList.add("https://www.youtube.com/watch?v=nwd7Sn0cGG0");
+        songLinksList.add("https://www.youtube.com/watch?v=sUmZvAafs3Y");
+        songLinksList.add("https://www.youtube.com/watch?v=ERMRWk1bwqo");
+        songLinksList.add("https://www.youtube.com/watch?v=GvB3OzTicQo");
+        songLinksList.add("https://www.youtube.com/watch?v=xseXbA2N6D0");
+        songLinksList.add("https://www.youtube.com/watch?v=A-m3aMcjx00");
+        songLinksList.add("https://www.youtube.com/watch?v=kffacxfA7G4");
+        songLinksList.add("https://www.youtube.com/watch?v=7h2SsusfQmE");
+        songLinksList.add("https://www.youtube.com/watch?v=zVl2oQ__GDE");
+        songLinksList.add("https://www.youtube.com/watch?v=tKKZevWj_0A");
+        songLinksList.add("https://www.youtube.com/watch?v=tKKZevWj_0A");
+        songLinksList.add("https://www.youtube.com/watch?v=tD4HCZe-tew");
+        songLinksList.add("https://www.youtube.com/watch?v=jzD_yyEcp0M");
+        songLinksList.add("https://www.youtube.com/watch?v=tt2k8PGm-TI");
+        songLinksList.add("https://www.youtube.com/watch?v=pXvoeCgi59o");
+        songLinksList.add("https://www.youtube.com/watch?v=rjBsQ9SygnE");
+        songLinksList.add("https://www.youtube.com/watch?v=n1a7o44WxNo");
+        songLinksList.add("https://www.youtube.com/watch?v=BjsjIkSb0cM");
+        songLinksList.add("https://www.youtube.com/watch?v=L8eRzOYhLuw");
+        songLinksList.add("https://www.youtube.com/watch?v=vZ_NpLWuL00");
+        songLinksList.add("https://www.youtube.com/watch?v=X46t8ZFqUB4");
+        songLinksList.add("https://www.youtube.com/watch?v=hu2M5vdfs1A");
+        songLinksList.add("https://www.youtube.com/watch?v=iS1g8G_njx8");
+        songLinksList.add("https://www.youtube.com/watch?v=p9LDnPyY9zA");
+        songLinksList.add("https://www.youtube.com/watch?v=hVHZI_IydU8");
+        songLinksList.add("https://www.youtube.com/watch?v=M3mJkSqZbX4");
+        songLinksList.add("https://www.youtube.com/watch?v=zDB8dM3MBvg");
+        songLinksList.add("https://www.youtube.com/watch?v=fRh_vgS2dFE");
+        songLinksList.add("https://www.youtube.com/watch?v=qV5lzRHrGeg");
+        songLinksList.add("https://www.youtube.com/watch?v=gwpTPrPoy4Y");
+        songLinksList.add("https://www.youtube.com/watch?v=ogSRY_1I9LE");
+        songLinksList.add("https://www.youtube.com/watch?v=1xwr7Jw-dqM");
+        songLinksList.add("https://www.youtube.com/watch?v=NaEbWyb9bOA");
+        songLinksList.add("https://www.youtube.com/watch?v=1xwr7Jw-dqM");
+        songLinksList.add("https://www.youtube.com/watch?v=Io0fBr1XBUA");
+        songLinksList.add("https://www.youtube.com/watch?v=p07Tfjs2mEM");
+        songLinksList.add("https://www.youtube.com/watch?v=uwznBOgyDy0");
+        songLinksList.add("https://www.youtube.com/watch?v=T82OEZmCr1o");
+        songLinksList.add("https://www.youtube.com/watch?v=aUKXa1u0VYk");
+        songLinksList.add("https://www.youtube.com/watch?v=OVZO6ArBKNY");
+        songLinksList.add("https://www.youtube.com/watch?v=EmI6b8xFSX4");
+        songLinksList.add("https://www.youtube.com/watch?v=u1yVCeXYya4");
+        songLinksList.add("https://www.youtube.com/watch?v=RhU9MZ98jxo");
+        songLinksList.add("https://www.youtube.com/watch?v=SmM0653YvXU");
+        songLinksList.add("https://www.youtube.com/watch?v=yw04QD1LaB0");
+        songLinksList.add("https://www.youtube.com/watch?v=YuPzpoC3QNc");
+        songLinksList.add("https://www.youtube.com/watch?v=rNsP4nE1_FA");
+        songLinksList.add("https://www.youtube.com/watch?v=nfs8NYg7yQM");
+        songLinksList.add("https://www.youtube.com/watch?v=_hMQe2U4c6w");
+        songLinksList.add("https://www.youtube.com/watch?v=TdyllLZeviY");
+        songLinksList.add("https://www.youtube.com/watch?v=l9T-2Fb_ZlY");
+        songLinksList.add("https://www.youtube.com/watch?v=EUoe7cf0HYw");
+        songLinksList.add("https://www.youtube.com/watch?v=m65jhGwtWrg");
+        songLinksList.add("https://www.youtube.com/watch?v=e-ORhEE9VVg");
+        songLinksList.add("https://www.youtube.com/watch?v=8qLL2Gx3I_k");
+        songLinksList.add("https://www.youtube.com/watch?v=EUoe7cf0HYw");
+        songLinksList.add("https://www.youtube.com/watch?v=6sxDpnrWSUo");
+        songLinksList.add("https://www.youtube.com/watch?v=zFA1VS8dzb4");
+        songLinksList.add("https://www.youtube.com/watch?v=3WTeNpg_nVA");
+        songLinksList.add("https://www.youtube.com/watch?v=xseXbA2N6D0");
+        songLinksList.add("https://www.youtube.com/watch?v=dS1Gf7qq2sI");
+        songLinksList.add("https://www.youtube.com/watch?v=lwnoSeiAFSY");
+        songLinksList.add("https://www.youtube.com/watch?v=PhG-vBxkuJk");
+        songLinksList.add("https://www.youtube.com/watch?v=FM7MFYoylVs");
+        songLinksList.add("https://www.youtube.com/watch?v=25ROFXjoaAU");
+        songLinksList.add("https://www.youtube.com/watch?v=rc4dHR3Ang0");
+        songLinksList.add("https://www.youtube.com/watch?v=yMaCwJxy-Rg");
+        songLinksList.add("https://www.youtube.com/watch?v=Il-an3K9pjg");
+        songLinksList.add("https://www.youtube.com/watch?v=Il-an3K9pjg");
+        songLinksList.add("https://www.youtube.com/watch?v=ANS9sSJA9Yc");
+        songLinksList.add("https://www.youtube.com/watch?v=fWb2bypvyhM");
+        songLinksList.add("https://www.youtube.com/watch?v=gdx7gN1UyX0");
+        songLinksList.add("https://www.youtube.com/watch?v=tp1ZluX4aYs");
+        songLinksList.add("https://www.youtube.com/watch?v=aMKtzB7zNrg");
+        songLinksList.add("https://www.youtube.com/watch?v=i-gyZ35074k");
+        songLinksList.add("https://www.youtube.com/watch?v=W-TE_Ys4iwM");
+        songLinksList.add("https://www.youtube.com/watch?v=i-gyZ35074k");
+        songLinksList.add("https://www.youtube.com/watch?v=cBDt_-tIfLI");
+        songLinksList.add("https://www.youtube.com/watch?v=-j0dlcfekqw");
+        songLinksList.add("https://www.youtube.com/watch?v=Bvz67EULTJc");
+        songLinksList.add("https://www.youtube.com/watch?v=lUotEgzKmG8");
+        songLinksList.add("https://www.youtube.com/watch?v=AUVRyAXaqVk");
+        songLinksList.add("https://www.youtube.com/watch?v=kOkQ4T5WO9E");
+        songLinksList.add("https://www.youtube.com/watch?v=VNKU4hSz3SU");
+        songLinksList.add("https://www.youtube.com/watch?v=ecvKEhiDi1c");
+        songLinksList.add("https://www.youtube.com/watch?v=xZC8ixkVvg8");
+        songLinksList.add("https://www.youtube.com/watch?v=df314N1zu9o");
+        songLinksList.add("https://www.youtube.com/watch?v=fWNaR-rxAic");
+        songLinksList.add("https://www.youtube.com/watch?v=kffacxfA7G4");
+        songLinksList.add("https://www.youtube.com/watch?v=HcVv9R1ZR84");
+        songLinksList.add("https://www.youtube.com/watch?v=cBOE1aUNZVo");
+        songLinksList.add("https://www.youtube.com/watch?v=Zi_XLOBDo_Y");
+        songLinksList.add("https://www.youtube.com/watch?v=PsO6ZnUZI0g");
+        songLinksList.add("https://www.youtube.com/watch?v=LrUvu1mlWco");
+        songLinksList.add("https://www.youtube.com/watch?v=fWNaR-rxAic");
+        songLinksList.add("https://www.youtube.com/watch?v=aUKXa1u0VYk");
+        songLinksList.add("https://www.youtube.com/watch?v=99qOnljEjnY");
+        songLinksList.add("https://www.youtube.com/watch?v=1xwr7Jw-dqM");
+        songLinksList.add("https://www.youtube.com/watch?v=Vf78alvpxRM");
+        songLinksList.add("https://www.youtube.com/watch?v=HoCwa6gnmM0");
+        songLinksList.add("https://www.youtube.com/watch?v=cBOE1aUNZVo");
+        songLinksList.add("https://www.youtube.com/watch?v=HYoxmS-uQ9k");
+        songLinksList.add("https://www.youtube.com/watch?v=kgUpRwMeRr4");
+        songLinksList.add("https://www.youtube.com/watch?v=_hMQe2U4c6w");
+        songLinksList.add("https://www.youtube.com/watch?v=qgy7vEje5-w");
+        songLinksList.add("https://www.youtube.com/watch?v=i7wveOu5hkQ");
+        songLinksList.add("https://www.youtube.com/watch?v=wAgZVLk6J4M");
+        songLinksList.add("https://www.youtube.com/watch?v=2XJphXsDrIA");
+        songLinksList.add("https://www.youtube.com/watch?v=VCLxJd1d84s");
+        songLinksList.add("https://www.youtube.com/watch?v=6Mgqbai3fKo");
+        songLinksList.add("https://www.youtube.com/watch?v=papuvlVeZg8");
+        songLinksList.add("https://www.youtube.com/watch?v=wVCZmXiK-6k");
+        songLinksList.add("https://www.youtube.com/watch?v=9mQk7Evt6Vs");
+        songLinksList.add("https://www.youtube.com/watch?v=I66oFXdf0KU");
+        songLinksList.add("https://www.youtube.com/watch?v=dS1Gf7qq2sI");
+        songLinksList.add("https://www.youtube.com/watch?v=vBGiFtb8Rpw");
+        songLinksList.add("https://www.youtube.com/watch?v=iaWGvoW5M6U");
+        songLinksList.add("https://www.youtube.com/watch?v=sUmZvAafs3Y");
+        songLinksList.add("https://www.youtube.com/watch?v=ho0WBKPJtfc");
+        songLinksList.add("https://www.youtube.com/watch?v=0zGcUoRlhmw");
+        songLinksList.add("https://www.youtube.com/watch?v=Io0fBr1XBUA");
+        songLinksList.add("https://www.youtube.com/watch?v=gdFqPis3ChA");
+        songLinksList.add("https://www.youtube.com/watch?v=aJOTlE1K90k");
+        songLinksList.add("https://www.youtube.com/watch?v=fRh_vgS2dFE");
+        songLinksList.add("https://www.youtube.com/watch?v=lGhAZW-y8a8");
+        songLinksList.add("https://www.youtube.com/watch?v=eC-F_VZ2T1c");
+        songLinksList.add("https://www.youtube.com/watch?v=jzD_yyEcp0M");
+        songLinksList.add("https://www.youtube.com/watch?v=U9cD4-ZgRy4");
+        songLinksList.add("https://www.youtube.com/watch?v=tD4HCZe-tew");
+        songLinksList.add("https://www.youtube.com/watch?v=U-PXEe-qeK4");
+        songLinksList.add("https://www.youtube.com/watch?v=ALZHF5UqnU4");
+        songLinksList.add("https://www.youtube.com/watch?v=-whp15J2n_M");
+        songLinksList.add("https://www.youtube.com/watch?v=HBttoBTxkAs");
+        songLinksList.add("https://www.youtube.com/watch?v=bC3WAxiLnDY");
+        songLinksList.add("https://www.youtube.com/watch?v=MkhotmP0ij4");
+        songLinksList.add("https://www.youtube.com/watch?v=J-dv_DcDD_A");
+        songLinksList.add("https://www.youtube.com/watch?v=MkhotmP0ij4");
+        songLinksList.add("https://www.youtube.com/watch?v=IxxstCcJlsc");
+        songLinksList.add("https://www.youtube.com/watch?v=fyLIHH-iqFI");
+        songLinksList.add("https://www.youtube.com/watch?v=-j0dlcfekqw");
+        songLinksList.add("https://www.youtube.com/watch?v=JudqK1hL18w");
+        songLinksList.add("https://www.youtube.com/watch?v=H7HmzwI67ec");
+        songLinksList.add("https://www.youtube.com/watch?v=bg7RjxsghNY");
+        songLinksList.add("https://www.youtube.com/watch?v=_P7S2lKif-A");
+        songLinksList.add("https://www.youtube.com/watch?v=eIpLAwON_R4");
+        songLinksList.add("https://www.youtube.com/watch?v=GoLPidSeD6Q");
+        songLinksList.add("https://www.youtube.com/watch?v=RnBT9uUYb1w");
+        songLinksList.add("https://www.youtube.com/watch?v=2-MBfn8XjIU");
+        songLinksList.add("https://www.youtube.com/watch?v=L7_jYl8A73g");
+        songLinksList.add("https://www.youtube.com/watch?v=LrUvu1mlWco");
+        songLinksList.add("https://www.youtube.com/watch?v=9vbddLNUOMs");
+        songLinksList.add("https://www.youtube.com/watch?v=Az-mGR-CehY");
+        songLinksList.add("https://www.youtube.com/watch?v=zUfVJ7c22r8");
+        songLinksList.add("https://www.youtube.com/watch?v=Az-mGR-CehY");
+        songLinksList.add("https://www.youtube.com/watch?v=7mHO_oFqQ4o");
+        songLinksList.add("https://www.youtube.com/watch?v=kthhAjR4CBs");
+        songLinksList.add("https://www.youtube.com/watch?v=5wyW-w1ikK0");
+        songLinksList.add("https://www.youtube.com/watch?v=tkJ_koXPZzs");
+        songLinksList.add("https://www.youtube.com/watch?v=YPTp4okj-eM");
+        songLinksList.add("https://www.youtube.com/watch?v=YPTp4okj-eM");
+        songLinksList.add("https://www.youtube.com/watch?v=WNeLUngb-Xg");
+        songLinksList.add("https://www.youtube.com/watch?v=kdFdeRoVPg0");
+        songLinksList.add("https://www.youtube.com/watch?v=nfs8NYg7yQM");
+        songLinksList.add("https://www.youtube.com/watch?v=SmM0653YvXU");
+        songLinksList.add("https://www.youtube.com/watch?v=2Vv-BfVoq4g");
+        songLinksList.add("https://www.youtube.com/watch?v=x0dNpGO1pCk");
+        songLinksList.add("https://www.youtube.com/watch?v=hVHZI_IydU8");
+        songLinksList.add("https://www.youtube.com/watch?v=pWT8Snks6oo");
+        songLinksList.add("https://www.youtube.com/watch?v=rtOvBOTyX00");
+        songLinksList.add("https://www.youtube.com/watch?v=eMcMbWl0fDk");
+        songLinksList.add("https://www.youtube.com/watch?v=50VNCymT-Cs");
+        songLinksList.add("https://www.youtube.com/watch?v=vNoKguSdy4Y");
+        songLinksList.add("https://www.youtube.com/watch?v=XPBwXKgDTdE");
+        songLinksList.add("https://www.youtube.com/watch?v=vZ_NpLWuL00");
+        songLinksList.add("https://www.youtube.com/watch?v=aatr_2MstrI");
+        songLinksList.add("https://www.youtube.com/watch?v=ho0WBKPJtfc");
+        songLinksList.add("https://www.youtube.com/watch?v=lEi_XBg2Fpk");
+        songLinksList.add("https://www.youtube.com/watch?v=JMd_51WictU");
+        songLinksList.add("https://www.youtube.com/watch?v=7Gi_AS13OBo");
+        songLinksList.add("https://www.youtube.com/watch?v=ft4jcPSLJfY");
+        songLinksList.add("https://www.youtube.com/watch?v=aR-KAldshAE");
+        songLinksList.add("https://www.youtube.com/watch?v=tp1ZluX4aYs");
+        songLinksList.add("https://www.youtube.com/watch?v=lEgTtQFMjWw");
+        songLinksList.add("https://www.youtube.com/watch?v=17i3bKKI4M0");
+        songLinksList.add("https://www.youtube.com/watch?v=r8dBp0E7X-E");
+        songLinksList.add("https://www.youtube.com/watch?v=7vJBau24uUE");
+        songLinksList.add("https://www.youtube.com/watch?v=eC-F_VZ2T1c");
+        songLinksList.add("https://www.youtube.com/watch?v=rn9AQoI7mYU");
+        songLinksList.add("https://www.youtube.com/watch?v=Ho32Oh6b4jc");
+        songLinksList.add("https://www.youtube.com/watch?v=U-PXEe-qeK4");
+        songLinksList.add("https://www.youtube.com/watch?v=YqeW9_5kURI");
+        songLinksList.add("https://www.youtube.com/watch?v=jaUu5tVtEhA");
+        songLinksList.add("https://www.youtube.com/watch?v=zDB8dM3MBvg");
+        songLinksList.add("https://www.youtube.com/watch?v=UpsKGvPjAgw");
+        songLinksList.add("https://www.youtube.com/watch?v=vZ_NpLWuL00");
+        songLinksList.add("https://www.youtube.com/watch?v=hYbHzzWmKUs");
+        songLinksList.add("https://www.youtube.com/watch?v=g5qU7p7yOY8");
+        songLinksList.add("https://www.youtube.com/watch?v=S_E2EHVxNAE");
+        songLinksList.add("https://www.youtube.com/watch?v=h--P8HzYZ74");
+        songLinksList.add("https://www.youtube.com/watch?v=H7HmzwI67ec");
+        songLinksList.add("https://www.youtube.com/watch?v=PVxc5mIHVuQ");
+        songLinksList.add("https://www.youtube.com/watch?v=XyL3YKK_1BI");
+        songLinksList.add("https://www.youtube.com/watch?v=RBumgq5yVrA");
+        songLinksList.add("https://www.youtube.com/watch?v=tSc8WROtNfc");
+        songLinksList.add("https://www.youtube.com/watch?v=e2vBLd5Egnk");
+        songLinksList.add("https://www.youtube.com/watch?v=_V3_7R-oB0g");
+        songLinksList.add("https://www.youtube.com/watch?v=fRh_vgS2dFE");
+        songLinksList.add("https://www.youtube.com/watch?v=qV5lzRHrGeg");
+        songLinksList.add("https://www.youtube.com/watch?v=K4DyBUG242c");
+        songLinksList.add("https://www.youtube.com/watch?v=SMs0GnYze34");
+        songLinksList.add("https://www.youtube.com/watch?v=2pPozfpsUhk");
+        songLinksList.add("https://www.youtube.com/watch?v=7YT5F20NnsI");
+        songLinksList.add("https://www.youtube.com/watch?v=35gCiF22P0k");
+        songLinksList.add("https://www.youtube.com/watch?v=gwpTPrPoy4Y");
+        songLinksList.add("https://www.youtube.com/watch?v=qgy7vEje5-w");
+        songLinksList.add("https://www.youtube.com/watch?v=ZrM9JmKwpHs");
+        songLinksList.add("https://www.youtube.com/watch?v=xh8Jp7QOEeQ");
+        songLinksList.add("https://www.youtube.com/watch?v=TdyllLZeviY");
+        songLinksList.add("https://www.youtube.com/watch?v=2YvG0NbYJpE");
+        songLinksList.add("https://www.youtube.com/watch?v=DyDfgMOUjCI");
+        songLinksList.add("https://www.youtube.com/watch?v=m70voYPCBQk");
+        songLinksList.add("https://www.youtube.com/watch?v=VJ2rlci9PE0");
+        songLinksList.add("https://www.youtube.com/watch?v=e3lgNmuajrg");
+        songLinksList.add("https://www.youtube.com/watch?v=R4VJyfCcOJc");
+        songLinksList.add("https://www.youtube.com/watch?v=YQHsXMglC9A");
+        songLinksList.add("https://www.youtube.com/watch?v=hEdvvTF5js4");
+        songLinksList.add("https://www.youtube.com/watch?v=LdH7aFjDzjI");
+        songLinksList.add("https://www.youtube.com/watch?v=DJqWZ3Zy5CU");
+        songLinksList.add("https://www.youtube.com/watch?v=ZJlQ92HpdFA");
+        songLinksList.add("https://www.youtube.com/watch?v=CwfoyVa980U");
+        songLinksList.add("https://www.youtube.com/watch?v=YQHsXMglC9A");
+        songLinksList.add("https://www.youtube.com/watch?v=xeUA7Hn9DsE");
+        songLinksList.add("https://www.youtube.com/watch?v=LkGV1D-0YA8");
+        songLinksList.add("https://www.youtube.com/watch?v=ckIM58Ecpcw");
+        songLinksList.add("https://www.youtube.com/watch?v=1OPql3ks-0s");
+        songLinksList.add("https://www.youtube.com/watch?v=GzU8KqOY8YA");
+        songLinksList.add("https://www.youtube.com/watch?v=fKopy74weus");
+        songLinksList.add("https://www.youtube.com/watch?v=K5KAc5CoCuk");
+        songLinksList.add("https://www.youtube.com/watch?v=wzumsXtyCW4");
+        songLinksList.add("https://www.youtube.com/watch?v=coQ95u7w_18");
+        songLinksList.add("https://www.youtube.com/watch?v=qk9ZChZ-1S8");
+        songLinksList.add("https://www.youtube.com/watch?v=6ttobrfMnyQ");
+        songLinksList.add("https://www.youtube.com/watch?v=RLcdPpjKKHo");
+        songLinksList.add("https://www.youtube.com/watch?v=AeA0ZKzAeH4");
+        songLinksList.add("https://www.youtube.com/watch?v=CwfoyVa980U");
+        songLinksList.add("https://www.youtube.com/watch?v=9bZkp7q19f0");
+        songLinksList.add("https://www.youtube.com/watch?v=9bZkp7q19f0");
+        songLinksList.add("https://www.youtube.com/watch?v=KnuWiuPX0Z4");
+        songLinksList.add("https://www.youtube.com/watch?v=YJVmu6yttiw");
+        songLinksList.add("https://www.youtube.com/watch?v=4uAKDBsq434");
+        songLinksList.add("https://www.youtube.com/watch?v=3AtDnEC4zak");
+        songLinksList.add("https://www.youtube.com/watch?v=6Mgqbai3fKo");
+        songLinksList.add("https://www.youtube.com/watch?v=ZHMDLOOP69I");
+        songLinksList.add("https://www.youtube.com/watch?v=2ll1DrlZgqk");
+        songLinksList.add("https://www.youtube.com/watch?v=ZJlQ92HpdFA");
+        songLinksList.add("https://www.youtube.com/watch?v=84yTsE4eNYQ");
+        songLinksList.add("https://www.youtube.com/watch?v=1CptfMEEC8g");
+        songLinksList.add("https://www.youtube.com/watch?v=4ughEPQGd8w");
+        songLinksList.add("https://www.youtube.com/watch?v=B1Jrf2Pz5vU");
+        songLinksList.add("https://www.youtube.com/watch?v=R4VJyfCcOJc");
+        songLinksList.add("https://www.youtube.com/watch?v=D5drYkLiLI8");
+        songLinksList.add("https://www.youtube.com/watch?v=LjhCEhWiKXk");
+        songLinksList.add("https://www.youtube.com/watch?v=Jr4TMIU9oQ4");
+        songLinksList.add("https://www.youtube.com/watch?v=D9syciL3Xsg");
+        songLinksList.add("https://www.youtube.com/watch?v=vIyP_joi3AI");
+        songLinksList.add("https://www.youtube.com/watch?v=Z8eXaXoUJRQ");
+        songLinksList.add("https://www.youtube.com/watch?v=ij_0p_6qTss");
+        songLinksList.add("https://www.youtube.com/watch?v=wJnBTPUQS5A");
+        songLinksList.add("https://www.youtube.com/watch?v=IAuRoAUV19o");
+        songLinksList.add("https://www.youtube.com/watch?v=S_E2EHVxNAE");
+        songLinksList.add("https://www.youtube.com/watch?v=dhYOPzcsbGM");
+        songLinksList.add("https://www.youtube.com/watch?v=Z8eXaXoUJRQ");
+        songLinksList.add("https://www.youtube.com/watch?v=z8OdasLT_BM");
+        songLinksList.add("https://www.youtube.com/watch?v=6ttobrfMnyQ");
+        songLinksList.add("https://www.youtube.com/watch?v=UCkkt2sBvKM");
+        songLinksList.add("https://www.youtube.com/watch?v=peByeoQhjMM");
+        songLinksList.add("https://www.youtube.com/watch?v=6VC1kCodFtI");
+        songLinksList.add("https://www.youtube.com/watch?v=dT2owtxkU8k");
+        songLinksList.add("https://www.youtube.com/watch?v=CLiXUT3MS34");
+        songLinksList.add("https://www.youtube.com/watch?v=59Vf7oQV9pg");
+        songLinksList.add("https://www.youtube.com/watch?v=CLiXUT3MS34");
+        songLinksList.add("https://www.youtube.com/watch?v=QcIy9NiNbmo");
+        songLinksList.add("https://www.youtube.com/watch?v=eMcMbWl0fDk");
+        songLinksList.add("https://www.youtube.com/watch?v=9eakEQSBR8o");
+        songLinksList.add("https://www.youtube.com/watch?v=YyhKdOCwD7s");
+        songLinksList.add("https://www.youtube.com/watch?v=WihX3peej0Q");
+        songLinksList.add("https://www.youtube.com/watch?v=-2U0Ivkn2Ds");
+        songLinksList.add("https://www.youtube.com/watch?v=0KSOMA3QBU0");
+        songLinksList.add("https://www.youtube.com/watch?v=BmRtyiSlqiA");
+        songLinksList.add("https://www.youtube.com/watch?v=2S24-y0Ij3Y");
+        songLinksList.add("https://www.youtube.com/watch?v=IHNzOHi8sJs");
+        songLinksList.add("https://www.youtube.com/watch?v=hEdvvTF5js4");
+        songLinksList.add("https://www.youtube.com/watch?v=e2CnyvhNu8g");
+        songLinksList.add("https://www.youtube.com/watch?v=EjaVLrF7cB8");
+        songLinksList.add("https://www.youtube.com/watch?v=HibDj27DHMI");
+        songLinksList.add("https://www.youtube.com/watch?v=G_7CprD5dg4");
+        songLinksList.add("https://www.youtube.com/watch?v=qkEW-1jK_rw");
+        songLinksList.add("https://www.youtube.com/watch?v=uAVUl0cAKpo");
+        songLinksList.add("https://www.youtube.com/watch?v=7wtfhZwyrcc");
+        songLinksList.add("https://www.youtube.com/watch?v=UxxajLWwzqY");
+        songLinksList.add("https://www.youtube.com/watch?v=vOXZkm9p_zY");
+        songLinksList.add("https://www.youtube.com/watch?v=60ItHLz5WEA");
+        songLinksList.add("https://www.youtube.com/watch?v=kJQP7kiw5Fk");
+        songLinksList.add("https://www.youtube.com/watch?v=f3SM3_JdlyM");
+        songLinksList.add("https://www.youtube.com/watch?v=rBcP024h1Mo");
+        songLinksList.add("https://www.youtube.com/watch?v=yw04QD1LaB0");
+        songLinksList.add("https://www.youtube.com/watch?v=mBZdHuZCfic");
+        songLinksList.add("https://www.youtube.com/watch?v=ffxKSjUwKdU");
+        songLinksList.add("https://www.youtube.com/watch?v=NuHTYUG76sg");
+        songLinksList.add("https://www.youtube.com/watch?v=pvP_OwVSFpk");
+        songLinksList.add("https://www.youtube.com/watch?v=cK47V9iYXLI");
+        songLinksList.add("https://www.youtube.com/watch?v=lY2yjAdbvdQ");
+        songLinksList.add("https://www.youtube.com/watch?v=m-el0pQLQE4");
+        songLinksList.add("https://www.youtube.com/watch?v=BmRtyiSlqiA");
+        songLinksList.add("https://www.youtube.com/watch?v=lmylJZ5WMsQ");
+        songLinksList.add("https://www.youtube.com/watch?v=F7fBsN_E60Q");
+        songLinksList.add("https://www.youtube.com/watch?v=FNx_yqUbAFM");
+        songLinksList.add("https://www.youtube.com/watch?v=1OPql3ks-0s");
+        songLinksList.add("https://www.youtube.com/watch?v=r1Fx0tqK5Z4");
+        songLinksList.add("https://www.youtube.com/watch?v=x8F5dz8kv1w");
+        songLinksList.add("https://www.youtube.com/watch?v=_s7rwesgVRQ");
+        songLinksList.add("https://www.youtube.com/watch?v=wIft-t-MQuE");
+        songLinksList.add("https://www.youtube.com/watch?v=u09k1EdDmlY");
+        songLinksList.add("https://www.youtube.com/watch?v=wJnBTPUQS5A");
+        songLinksList.add("https://www.youtube.com/watch?v=Vf78alvpxRM");
+        songLinksList.add("https://www.youtube.com/watch?v=psoxDNP7EL0");
+        songLinksList.add("https://www.youtube.com/watch?v=OfS1jFck8YQ");
+        songLinksList.add("https://www.youtube.com/watch?v=9bZkp7q19f0");
+        songLinksList.add("https://www.youtube.com/watch?v=zsQNyyJcR4A");
+        songLinksList.add("https://www.youtube.com/watch?v=zczlDTKvOa8");
+        songLinksList.add("https://www.youtube.com/watch?v=OjDuQ7O9XUo");
+        songLinksList.add("https://www.youtube.com/watch?v=e-ORhEE9VVg");
+        songLinksList.add("https://www.youtube.com/watch?v=2YvG0NbYJpE");
+        songLinksList.add("https://www.youtube.com/watch?v=xh8Jp7QOEeQ");
+        songLinksList.add("https://www.youtube.com/watch?v=Rb6Scz-5YOs");
+        songLinksList.add("https://www.youtube.com/watch?v=N1kpeRhqVzI");
+        songLinksList.add("https://www.youtube.com/watch?v=3AtDnEC4zak");
+        songLinksList.add("https://www.youtube.com/watch?v=NfTS7gM7zQ0");
+        songLinksList.add("https://www.youtube.com/watch?v=HibDj27DHMI");
+        songLinksList.add("https://www.youtube.com/watch?v=yaJx0Gj_LCY");
+        songLinksList.add("https://www.youtube.com/watch?v=ZlH78Tm_oUk");
+        songLinksList.add("https://www.youtube.com/watch?v=heVJaMvCmR0");
+        songLinksList.add("https://www.youtube.com/watch?v=4qeaBFFq3to");
+        songLinksList.add("https://www.youtube.com/watch?v=W7ey2JlJ_GM");
+        songLinksList.add("https://www.youtube.com/watch?v=lUotEgzKmG8");
+        songLinksList.add("https://www.youtube.com/watch?v=-35jibKqbEo");
+        songLinksList.add("https://www.youtube.com/watch?v=kCArjJPYs-U");
+        songLinksList.add("https://www.youtube.com/watch?v=GmdBXhT3-mQ");
+        songLinksList.add("https://www.youtube.com/watch?v=M-P4QBt-FWw");
+        songLinksList.add("https://www.youtube.com/watch?v=YPTp4okj-eM");
+        songLinksList.add("https://www.youtube.com/watch?v=n-D1EB74Ckg");
+        songLinksList.add("https://www.youtube.com/watch?v=R7xbhKIiw4Y");
+        songLinksList.add("https://www.youtube.com/watch?v=K5KAc5CoCuk");
+        songLinksList.add("https://www.youtube.com/watch?v=NdZGajBmIWM");
+        songLinksList.add("https://www.youtube.com/watch?v=E3x_dLVTEuA");
+        songLinksList.add("https://www.youtube.com/watch?v=A-lebYNcgBk");
+        songLinksList.add("https://www.youtube.com/watch?v=rjBsQ9SygnE");
+        songLinksList.add("https://www.youtube.com/watch?v=6Mgqbai3fKo");
+        songLinksList.add("https://www.youtube.com/watch?v=f1knjN8U1mA");
+        songLinksList.add("https://www.youtube.com/watch?v=i7wveOu5hkQ");
+        songLinksList.add("https://www.youtube.com/watch?v=ngORmvyvAaI");
+        songLinksList.add("https://www.youtube.com/watch?v=4e8w1dT2npE");
+        songLinksList.add("https://www.youtube.com/watch?v=FN3bTP84GCU");
+        songLinksList.add("https://www.youtube.com/watch?v=sV4VuT1p2xs");
+        songLinksList.add("https://www.youtube.com/watch?v=1z8NpmCqvZE");
+        songLinksList.add("https://www.youtube.com/watch?v=nfs8NYg7yQM");
+        songLinksList.add("https://www.youtube.com/watch?v=ckIM58Ecpcw");
+        songLinksList.add("https://www.youtube.com/watch?v=ifCAfAzOBJM");
+        songLinksList.add("https://www.youtube.com/watch?v=FRjOSmc01-M");
+        songLinksList.add("https://www.youtube.com/watch?v=R91JRfu5sWc");
+        songLinksList.add("https://www.youtube.com/watch?v=e_vl5aFXB4Q");
+        songLinksList.add("https://www.youtube.com/watch?v=G_7CprD5dg4");
+        songLinksList.add("https://www.youtube.com/watch?v=RLcdPpjKKHo");
+        songLinksList.add("https://www.youtube.com/watch?v=bKDdT_nyP54");
+        songLinksList.add("https://www.youtube.com/watch?v=4qeaBFFq3to");
+        songLinksList.add("https://www.youtube.com/watch?v=6RLLOEzdxsM");
+        songLinksList.add("https://www.youtube.com/watch?v=SmM0653YvXU");
+        songLinksList.add("https://www.youtube.com/watch?v=rdXZ0kkVk4k");
+        songLinksList.add("https://www.youtube.com/watch?v=j9V78UbdzWI");
+        songLinksList.add("https://www.youtube.com/watch?v=-II6fv8NMfY");
+        songLinksList.add("https://www.youtube.com/watch?v=5TJ5-6lqLFw");
+        songLinksList.add("https://www.youtube.com/watch?v=n-D1EB74Ckg");
+        songLinksList.add("https://www.youtube.com/watch?v=vtNJMAyeP0s");
+        songLinksList.add("https://www.youtube.com/watch?v=z8OdasLT_BM");
+        songLinksList.add("https://www.youtube.com/watch?v=6sxDpnrWSUo");
+        songLinksList.add("https://www.youtube.com/watch?v=Mc2-YM9Bhu4");
+        songLinksList.add("https://www.youtube.com/watch?v=6VC1kCodFtI");
+        songLinksList.add("https://www.youtube.com/watch?v=6iz9dUKDSMU");
+        songLinksList.add("https://www.youtube.com/watch?v=Pkh8UtuejGw");
+        songLinksList.add("https://www.youtube.com/watch?v=dT2owtxkU8k");
+        songLinksList.add("https://www.youtube.com/watch?v=PonUS87Yeqw");
+        songLinksList.add("https://www.youtube.com/watch?v=AgFeZr5ptV8");
+        songLinksList.add("https://www.youtube.com/watch?v=rTogiSQy4Lw");
+        songLinksList.add("https://www.youtube.com/watch?v=0KSOMA3QBU0");
+        songLinksList.add("https://www.youtube.com/watch?v=1z8NpmCqvZE");
+        songLinksList.add("https://www.youtube.com/watch?v=ioNng23DkIM");
+        songLinksList.add("https://www.youtube.com/watch?v=FRjOSmc01-M");
+        songLinksList.add("https://www.youtube.com/watch?v=17pWrHK3udE");
+        songLinksList.add("https://www.youtube.com/watch?v=ZlH78Tm_oUk");
+        songLinksList.add("https://www.youtube.com/watch?v=ASO_zypdnsQ");
+        songLinksList.add("https://www.youtube.com/watch?v=LwjzmdiRFpc");
+        songLinksList.add("https://www.youtube.com/watch?v=2i2khp_npdE");
+        songLinksList.add("https://www.youtube.com/watch?v=oOlmtJRB8oI");
+        songLinksList.add("https://www.youtube.com/watch?v=1-xGerv5FOk");
+        songLinksList.add("https://www.youtube.com/watch?v=xiwRprisLwY");
+        songLinksList.add("https://www.youtube.com/watch?v=pXvoeCgi59o");
+        songLinksList.add("https://www.youtube.com/watch?v=cK47V9iYXLI");
+        songLinksList.add("https://www.youtube.com/watch?v=lY2yjAdbvdQ");
+        songLinksList.add("https://www.youtube.com/watch?v=yTv0PiRCPjg");
+        songLinksList.add("https://www.youtube.com/watch?v=D5drYkLiLI8");
+        songLinksList.add("https://www.youtube.com/watch?v=IHNzOHi8sJs");
+        songLinksList.add("https://www.youtube.com/watch?v=yIIGQB6EMAM");
+        songLinksList.add("https://www.youtube.com/watch?v=Hh2Sxuzqqw0");
+        songLinksList.add("https://www.youtube.com/watch?v=kOkQ4T5WO9E");
+        songLinksList.add("https://www.youtube.com/watch?v=bE1Fz03cT6o");
+        songLinksList.add("https://www.youtube.com/watch?v=X-YtdTMJfhM");
+        songLinksList.add("https://www.youtube.com/watch?v=Bvz67EULTJc");
+        songLinksList.add("https://www.youtube.com/watch?v=cH4E_t3m3xM");
+        songLinksList.add("https://www.youtube.com/watch?v=ox4tmEV6-QU");
+        songLinksList.add("https://www.youtube.com/watch?v=EjaVLrF7cB8");
+        songLinksList.add("https://www.youtube.com/watch?v=Mc2-YM9Bhu4");
+        songLinksList.add("https://www.youtube.com/watch?v=BQ0mxQXmLsk");
+        songLinksList.add("https://www.youtube.com/watch?v=78gZvPCM4Ho");
+        songLinksList.add("https://www.youtube.com/watch?v=Jr4TMIU9oQ4");
+        songLinksList.add("https://www.youtube.com/watch?v=rDWuqrJAyGw");
+        songLinksList.add("https://www.youtube.com/watch?v=eoFkN53mMPA");
+        songLinksList.add("https://www.youtube.com/watch?v=NqI1uCwOdkY");
+        songLinksList.add("https://www.youtube.com/watch?v=LaVPQe8Zf9o");
     }
 
     /*private class GetSongMetaData extends AsyncTask<String, Void, String> {

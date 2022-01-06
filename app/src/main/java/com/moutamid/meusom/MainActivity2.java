@@ -16,8 +16,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DatabaseReference;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -96,7 +99,7 @@ public class MainActivity2 extends AppCompatActivity {
 
         private String error = Constants.NULL;
         private String songName, songAlbumName, songCoverUrl;
-        private DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+
         private FirebaseAuth auth = FirebaseAuth.getInstance();
 
         @Override
@@ -147,44 +150,54 @@ public class MainActivity2 extends AppCompatActivity {
                 return;
             }
 
-/*            Intent intent = new Intent(DownloadActivity.this, CommandExampleActivity.class);
-            intent.putExtra(Constants.URL, url);
-            intent.putExtra(Constants.SONG_NAME, songName);
-            intent.putExtra(Constants.SONG_ALBUM_NAME, songAlbumName);
-            intent.putExtra(Constants.SONG_COVER_URL, songCoverUrl);
-            intent.putExtra(Constants.FROM_INTENT, isIntent);
+            FirebaseAuth mAuth = FirebaseAuth.getInstance();
+            Utils.databaseReference().child(Constants.SONGS)
+                    .child(mAuth.getCurrentUser().getUid())
+                    .orderByChild("songYTUrl")
+                    .equalTo(getVideoId(url))
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                doneLoading("ALREADY DOWNLOADED");
+                                /*for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
 
-            editText.setText("");
+                                    dataSnapshot.getKey();
 
-            startActivity(intent);
+                                }*/
+                            } else {
+                                String key =  Utils.databaseReference().child(Constants.SONGS)
+                                        .child(auth.getCurrentUser().getUid()).push().getKey();
 
-            if (getIntent().hasExtra(Constants.URL)) {*/
+                                songModel.setSongYTUrl(getVideoId(url));
+                                songModel.setSongName(songName);
+                                songModel.setSongAlbumName(songAlbumName);
+                                songModel.setSongCoverUrl(songCoverUrl);
+                                songModel.setSongPushKey(key);
 
-
-            String key = databaseReference.child(Constants.SONGS)
-                    .child(auth.getCurrentUser().getUid()).push().getKey();
-
-            songModel.setSongYTUrl(getVideoId(url));
-            songModel.setSongName(songName);
-            songModel.setSongAlbumName(songAlbumName);
-            songModel.setSongCoverUrl(songCoverUrl);
-            songModel.setSongPushKey(key);
-
-            databaseReference.child(Constants.SONGS)
-                    .child(auth.getCurrentUser().getUid()).child(key)
-                    .setValue(songModel).addOnCompleteListener(new OnCompleteListener<Void>() {
-                @Override
-                public void onComplete(@NonNull Task<Void> task) {
+                                Utils.databaseReference().child(Constants.SONGS)
+                                        .child(auth.getCurrentUser().getUid()).child(key)
+                                        .setValue(songModel).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<Void> task) {
 //                    Toast.makeText(context, "Added to database", Toast.LENGTH_SHORT).show();
 
 
-                    if (task.isSuccessful())
-                        startInitService(url, key, songName);
+                                        if (task.isSuccessful())
+                                            startInitService(url, key, songName);
 
-                    else doneLoading(task.getException().getMessage());
+                                        else doneLoading(task.getException().getMessage());
 
-                }
-            });
+                                    }
+                                });
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+
+                        }
+                    });
         }
 
     }

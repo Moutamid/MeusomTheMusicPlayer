@@ -24,7 +24,7 @@ import com.bumptech.glide.request.RequestOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
+
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
@@ -44,7 +44,7 @@ import static com.moutamid.meusom.R.color.darkgray;
 public class AlbumFragment extends Fragment {
     private Utils utils = new Utils();
 
-    private DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+
     private FirebaseAuth auth = FirebaseAuth.getInstance();
 
     private ArrayList<SongModel> songModelArrayList = new ArrayList<>();
@@ -81,8 +81,9 @@ public class AlbumFragment extends Fragment {
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
         conversationRecyclerView.setNestedScrollingEnabled(false);
+        conversationRecyclerView.setItemViewCacheSize(20);
 
-        databaseReference.child(Constants.SONGS)
+         Utils.databaseReference().child(Constants.SONGS)
                 .child(auth.getCurrentUser().getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override

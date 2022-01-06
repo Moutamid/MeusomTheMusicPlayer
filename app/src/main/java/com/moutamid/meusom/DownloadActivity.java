@@ -15,6 +15,13 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -102,13 +109,31 @@ public class DownloadActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(getVideoId(url))) {
             editText.setError("Wrong url!");
         } else {
-//            GetSongMetaData getSongMetaData = new GetSongMetaData();
-//            getSongMetaData.setUrl(url);
-            new GetSongMetaData().execute();
+            FirebaseAuth mAuth = FirebaseAuth.getInstance();
+            Utils.databaseReference().child(Constants.SONGS)
+                    .child(mAuth.getCurrentUser().getUid())
+                    .orderByChild("songYTUrl")
+                    .equalTo(getVideoId(url))
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                Toast.makeText(DownloadActivity.this, "ALREADY DOWNLOADED", Toast.LENGTH_SHORT).show();
+                                /*for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
 
-//            new GetSongMetaData().setUrl("");
+                                    dataSnapshot.getKey();
 
-//                    Toast.makeText(DownloadActivity.this, getVideoId(url), Toast.LENGTH_SHORT).show();
+                                }*/
+                            } else {
+                                new GetSongMetaData().execute();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            new GetSongMetaData().execute();
+                        }
+                    });
 
         }
     }
