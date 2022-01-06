@@ -3,6 +3,7 @@ package com.moutamid.meusom;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
@@ -169,49 +170,68 @@ public class TracksFragment extends Fragment {
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
 
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
-        conversationRecyclerView.setNestedScrollingEnabled(false);
+//        conversationRecyclerView.setNestedScrollingEnabled(false);
         conversationRecyclerView.setItemViewCacheSize(20);
 
-         Utils.databaseReference().child(Constants.SONGS)
-                .child(auth.getCurrentUser().getUid())
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (!snapshot.exists()) {
-                            return;
-                        }
+        new LoadData().execute();
 
-                        songModelArrayList.clear();
-                        songModelArrayListAll.clear();
-
-                        for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-
-                            SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
-
-                            if (utils.fileExists(songModel1.getSongName())) {
-
-                                songModel1.setSongPushKey(dataSnapshot.getKey());
-                                songModelArrayList.add(songModel1);
-                                songModelArrayListAll.add(songModel1);
-                            }
-                        }
-
-                        sortTheList();
-
-                        adapter = new RecyclerViewAdapterMessages();
-                        conversationRecyclerView.setAdapter(adapter);
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(getActivity(), error.toException().getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
 
     }
+
+
+    private class LoadData extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            Utils.databaseReference().child(Constants.SONGS)
+                    .child(auth.getCurrentUser().getUid())
+                    .addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (!snapshot.exists()) {
+                                return;
+                            }
+
+                            songModelArrayList.clear();
+                            songModelArrayListAll.clear();
+
+                            for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+
+                                SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
+
+                                if (utils.fileExists(songModel1.getSongName())) {
+
+                                    songModel1.setSongPushKey(dataSnapshot.getKey());
+                                    songModelArrayList.add(songModel1);
+                                    songModelArrayListAll.add(songModel1);
+                                }
+                            }
+
+                            sortTheList();
+
+                            requireActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    adapter = new RecyclerViewAdapterMessages();
+                                    conversationRecyclerView.setAdapter(adapter);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+//                            Toast.makeText(getActivity(), error.toException().getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+            return null;
+        }
+
+    }
+
     private void sortTheList() {
         String sortType = utils.getStoredString(requireContext(), Constants.SORT);
 
@@ -241,6 +261,7 @@ public class TracksFragment extends Fragment {
         }
 
     }
+
     private class RecyclerViewAdapterMessages extends RecyclerView.Adapter
             <RecyclerViewAdapterMessages.ViewHolderRightMessage> implements Filterable {
 

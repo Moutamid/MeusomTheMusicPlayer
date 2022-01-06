@@ -31,17 +31,14 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/songCountTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+
+        <ImageView
+            android:id="@+id/downloadAllBtn"
+            android:layout_width="45dp"
+            android:layout_height="match_parent"
             android:layout_alignParentEnd="true"
-            android:layout_marginEnd="20dp"
-            android:layout_centerVertical="true"
-            android:fontFamily="@font/droid_sans_bold"
-            android:text="(loading)"
-            android:textColor="@color/white"
-            android:textSize="15sp" />
+            android:layout_marginEnd="15dp"
+            android:src="@drawable/download" />
 
         <View
             android:layout_width="match_parent"
@@ -51,54 +48,79 @@
 
     </RelativeLayout>
 
-    <TextView
-        android:id="@+id/uyuyu"
+    <RelativeLayout
+        android:id="@+id/uyuyu1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/top_layout_command_activity"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="20dp"
-        android:fontFamily="@font/droid_sans_bold"
-        android:text="@string/tracks_included"
-        android:textColor="@color/white"
-        android:textSize="16sp" />
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/uyuyu"
         android:layout_marginTop="20dp">
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/uyuyu"
             android:layout_width="match_parent"
-
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_centerVertical="true"
+            android:layout_marginStart="20dp"
+            android:fontFamily="@font/droid_sans_bold"
+            android:text="@string/tracks_included"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/downloadRecyclerView"
-                android:layout_width="match_parent"
-                tools:itemCount="4"
-                tools:listitem="@layout/layout_download_item"
-                android:layout_height="wrap_content" />
+        <TextView
+            android:id="@+id/songCountTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="20dp"
+            android:fontFamily="@font/droid_sans_bold"
+            android:text="(loading)"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="200dp" />
 
-            <TextView
-                android:id="@+id/tv_command_output"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:visibility="gone"
-                android:text="null"
-                android:textColor="@color/white"
-                android:textIsSelectable="true" />
+    </RelativeLayout>
 
-        </LinearLayout>
+    <!--
 
-    </androidx.core.widget.NestedScrollView>
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@+id/uyuyu"
+            android:layout_marginTop="20dp">
+    -->
+
+    <!--<LinearLayout
+        android:layout_width="match_parent"
+        android:layout_below="@+id/uyuyu"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">-->
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/downloadRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/uyuyu1"
+        tools:itemCount="4"
+        tools:listitem="@layout/layout_download_item" />
+
+    <!--<View
+        android:layout_width="match_parent"
+        android:layout_height="200dp" />
+-->
+    <TextView
+        android:id="@+id/tv_command_output"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:text="null"
+        android:textColor="@color/white"
+        android:textIsSelectable="true"
+        android:visibility="gone" />
+
+    <!--        </LinearLayout>-->
+
+    <!--    </androidx.core.widget.NestedScrollView>-->
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"

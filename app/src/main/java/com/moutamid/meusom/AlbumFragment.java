@@ -2,6 +2,7 @@ package com.moutamid.meusom;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -59,9 +60,9 @@ public class AlbumFragment extends Fragment {
         Context context = getActivity();
 
         if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.ENGLISH)) {
-            utils.changeLanguage(context,"en");
+            utils.changeLanguage(context, "en");
         } else if (utils.getStoredString(context, Constants.LANGUAGE).equals(Constants.PORTUGUESE)) {
-            utils.changeLanguage(context,"pr");
+            utils.changeLanguage(context, "pr");
         }
         View view = inflater.inflate(R.layout.album_fragment, container, false);
 
@@ -77,51 +78,61 @@ public class AlbumFragment extends Fragment {
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
 
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
-        conversationRecyclerView.setNestedScrollingEnabled(false);
+//        conversationRecyclerView.setNestedScrollingEnabled(false);
         conversationRecyclerView.setItemViewCacheSize(20);
 
-         Utils.databaseReference().child(Constants.SONGS)
-                .child(auth.getCurrentUser().getUid())
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (!snapshot.exists()) {
-                            return;
-                        }
-
-                        songModelArrayList.clear();
-
-                        for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-
-                            SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
-                            if (utils.fileExists(songModel1.getSongName())) {
-
-                                songModel1.setSongPushKey(dataSnapshot.getKey());
-                                songModelArrayList.add(songModel1);
-                            }
-                        }
-
-//                        Collections.sort(songModelArrayList, new Comparator<SongModel>() {
-//                            @Override
-//                            public int compare(SongModel songModel, SongModel t1) {
-//                                return songModel.getSongAlbumName().compareTo(t1.getSongAlbumName());
-//                            }
-//                        });
-
-                        adapter = new RecyclerViewAdapterMessages();
-                        conversationRecyclerView.setAdapter(adapter);
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(getActivity(), error.toException().getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+        new LoadData().execute();
 
     }
+
+
+    private class LoadData extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            Utils.databaseReference().child(Constants.SONGS)
+                    .child(auth.getCurrentUser().getUid())
+                    .addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (!snapshot.exists()) {
+                                return;
+                            }
+
+                            songModelArrayList.clear();
+
+                            for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+
+                                SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
+                                if (utils.fileExists(songModel1.getSongName())) {
+
+                                    songModel1.setSongPushKey(dataSnapshot.getKey());
+                                    songModelArrayList.add(songModel1);
+                                }
+                            }
+
+                            requireActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    adapter = new RecyclerViewAdapterMessages();
+                                    conversationRecyclerView.setAdapter(adapter);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+//                            Toast.makeText(getActivity(), error.toException().getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+            return null;
+        }
+
+    }
+
 
     private class RecyclerViewAdapterMessages extends RecyclerView.Adapter
             <RecyclerViewAdapterMessages.ViewHolderRightMessage> {

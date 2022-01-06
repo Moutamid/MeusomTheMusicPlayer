@@ -81,7 +81,7 @@ public class SplashActivity extends AppCompatActivity {
         }, 500);
     }
 
-    private class GetSongMetaData extends AsyncTask<String, Void, String> {
+    /*private class GetSongMetaData extends AsyncTask<String, Void, String> {
 
         //        private String url;
 //        private String error = null;
@@ -247,7 +247,6 @@ public class SplashActivity extends AppCompatActivity {
         }
         return videoId;
     }
-
 
     ArrayList<String> songLinksList = new ArrayList<>();
 
@@ -870,7 +869,10 @@ public class SplashActivity extends AppCompatActivity {
         songLinksList.add("https://www.youtube.com/watch?v=NqI1uCwOdkY");
         songLinksList.add("https://www.youtube.com/watch?v=LaVPQe8Zf9o");
     }
-
+*/
+    /**
+     * --------------
+     */
     /*private class GetSongMetaData extends AsyncTask<String, Void, String> {
 
         private String error = null;

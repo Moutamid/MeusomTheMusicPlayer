@@ -481,15 +481,17 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
         conversationRecyclerView = dialog.findViewById(R.id.queueRecyclerView);
         //conversationRecyclerView.addItemDecoration(new DividerItemDecoration(conversationRecyclerView.getContext(), DividerItemDecoration.VERTICAL));
         adapter = new RecyclerViewAdapterMessages();
-        //        LinearLayoutManager layoutManagerUserFriends = new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false);
-        //    int numberOfColumns = 3;
-        //int mNoOfColumns = calculateNoOfColumns(getApplicationContext(), 50);
-        //  recyclerView.setLayoutManager(new GridLayoutManager(this, mNoOfColumns));
+
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
+
+
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
-        conversationRecyclerView.setNestedScrollingEnabled(false);
+//        conversationRecyclerView.setNestedScrollingEnabled(false);
+        conversationRecyclerView.setItemViewCacheSize(20);
+
 
         conversationRecyclerView.setAdapter(adapter);
 

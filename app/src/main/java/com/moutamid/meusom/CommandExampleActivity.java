@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -22,6 +23,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.loader.content.AsyncTaskLoader;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -44,6 +46,8 @@ import com.yausername.youtubedl_android.YoutubeDLRequest;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -154,50 +158,76 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
 
         conversationRecyclerView.setLayoutManager(linearLayoutManager);
         conversationRecyclerView.setHasFixedSize(true);
-        conversationRecyclerView.setNestedScrollingEnabled(false);
+//        conversationRecyclerView.setNestedScrollingEnabled(false);
         conversationRecyclerView.setItemViewCacheSize(20);
 
-        Utils.databaseReference().child(Constants.SONGS)
-                .child(auth.getCurrentUser().getUid())
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (!snapshot.exists()) {
-                            return;
+        new LoadData().execute();
+
+    }
+
+    private class LoadData extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            Utils.databaseReference().child(Constants.SONGS)
+                    .child(auth.getCurrentUser().getUid())
+                    .addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (!snapshot.exists()) {
+                                return;
+                            }
+
+                            songModelArrayList.clear();
+
+                            for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+
+                                SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
+                                songModel1.setSongPushKey(dataSnapshot.getKey());
+                                songModelArrayList.add(songModel1);
+
+                            }
+                            Log.i(TAG, "onDataChange: DUPLICATED: STARTED");
+                            Set<String> set = new HashSet<String>();
+                            for (SongModel model12 : songModelArrayList) {
+                                if (!set.add(model12.getSongYTUrl())) {
+                                    Log.i(TAG, "onDataChange: REMOVED: " + model12.getSongYTUrl());
+                                    Utils.databaseReference().child(Constants.SONGS)
+                                            .child(auth.getCurrentUser().getUid())
+                                            .child(model12.getSongPushKey())
+                                            .removeValue();
+                                }
+                            }
+                            Log.i(TAG, "onDataChange: DUPLICATED: ENDED");
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    adapter = new RecyclerViewAdapterMessages();
+                                    conversationRecyclerView.setAdapter(adapter);
+
+                                    TextView tv = findViewById(R.id.songCountTextView);
+                                    tv.setText("(" + songModelArrayList.size() + ")");
+                                }
+                            });
+
                         }
 
-                        songModelArrayList.clear();
-
-                        for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-
-                            SongModel songModel1 = dataSnapshot.getValue(SongModel.class);
-                            songModel1.setSongPushKey(dataSnapshot.getKey());
-                            songModelArrayList.add(songModel1);
-
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+//                            Toast.makeText(CommandExampleActivity.this, error.toException().getMessage(), Toast.LENGTH_SHORT).show();
                         }
-
-                        adapter = new RecyclerViewAdapterMessages();
-                        conversationRecyclerView.setAdapter(adapter);
-
-                        TextView tv = findViewById(R.id.songCountTextView);
-                        tv.setText("(" + songModelArrayList.size() + ")");
-
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(CommandExampleActivity.this, error.toException().getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    });
+            return null;
+        }
 
     }
 
     private String currentDownloadName = "null";
     private String currentDownloadUrl = "null";
-
 
     private class RecyclerViewAdapterMessages extends RecyclerView.Adapter
             <RecyclerViewAdapterMessages.ViewHolderRightMessage> {
@@ -232,8 +262,8 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
             if (utils.fileExists(model.getSongName())) {
                 holder.downloadStatus.setText(Constants.COMPLETED);
-                holder.downloadButton.setVisibility(View.GONE);
-//                holder.downloadButton.setImageResource(R.drawable.off_track);
+//                holder.downloadButton.setVisibility(View.GONE);
+                holder.downloadButton.setImageResource(0);
             } else {
                 holder.downloadStatus.setText(Constants.NOT_DOWNLOADED);
                 holder.downloadButton.setImageResource(R.drawable.donwloadtrack);
