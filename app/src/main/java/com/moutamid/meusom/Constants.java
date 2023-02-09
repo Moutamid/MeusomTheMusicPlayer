@@ -3,6 +3,7 @@ package com.moutamid.meusom;
 public class Constants {
     public static final String URL = "url";
     public static final String SONG_NAME = "songName";
+    public static final String videoLink = "videoLink";
     public static final String SONG_ALBUM_NAME = "songAlbumName";
     public static final String SONG_COVER_URL = "songCoverUrl";
     public static final String SONGS = "songs";

@@ -207,10 +207,11 @@ public class DownloadActivity extends AppCompatActivity {
                 Toast.makeText(context, error, Toast.LENGTH_SHORT).show();
                 return;
             }
-
+            String videoLink = "https://www.youtube.com/watch?v=" + getVideoId(url);
             Intent intent = new Intent(DownloadActivity.this, CommandExampleActivity.class);
             intent.putExtra(Constants.URL, getVideoId(url));
             intent.putExtra(Constants.SONG_NAME, songName);
+            intent.putExtra(Constants.videoLink, videoLink);
             intent.putExtra(Constants.SONG_ALBUM_NAME, songAlbumName);
             intent.putExtra(Constants.SONG_COVER_URL, songCoverUrl);
             intent.putExtra(Constants.FROM_INTENT, isIntent);

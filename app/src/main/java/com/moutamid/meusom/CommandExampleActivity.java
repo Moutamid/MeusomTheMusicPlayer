@@ -1,6 +1,8 @@
 package com.moutamid.meusom;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -10,6 +12,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.loader.content.AsyncTaskLoader;
@@ -31,6 +35,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
+import com.downloader.Error;
+import com.downloader.OnCancelListener;
+import com.downloader.OnDownloadListener;
+import com.downloader.OnPauseListener;
+import com.downloader.OnProgressListener;
+import com.downloader.OnStartOrResumeListener;
+import com.downloader.PRDownloader;
+import com.downloader.PRDownloaderConfig;
+import com.downloader.Progress;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -51,6 +64,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import at.huber.youtubeExtractor.VideoMeta;
+import at.huber.youtubeExtractor.YouTubeExtractor;
+import at.huber.youtubeExtractor.YtFile;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -70,13 +86,15 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
     private Utils utils = new Utils();
 
+    String videoLink;
+
     private Button btnRunCommand;
     private EditText etCommand;
     private ProgressBar progressBar;
     private TextView tvCommandStatus;
     private TextView tvCommandOutput;
     private ProgressBar pbLoading;
-
+    ProgressDialog progressDialog;
     private boolean running = false;
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
 
@@ -112,7 +130,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 //    private String YTUrl;
 
     private boolean isIntent = false;
-
+    @SuppressLint("StaticFieldLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,6 +140,20 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             utils.changeLanguage(context, "pr");
         }
         setContentView(R.layout.activity_command_example);
+
+        PRDownloaderConfig config = PRDownloaderConfig.newBuilder()
+                .setReadTimeout(30_000)
+                .setConnectTimeout(30_000)
+                .build();
+        PRDownloader.initialize(getApplicationContext(), config);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setCancelable(false);
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setTitle("Video is Downloading...");
+        progressDialog.setMax(100);
+
+        videoLink = getIntent().getStringExtra(Constants.videoLink);
 
         if (getIntent().hasExtra(Constants.URL)) {
             songModel.setSongYTUrl(getIntent().getStringExtra(Constants.URL));
@@ -140,10 +172,69 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
             });
         }
 
+        new AlertDialog.Builder(this)
+                .setTitle("").setMessage("Do you want to download the both video and audio or just the audio song?")
+                .setPositiveButton("Both", (dialog, which) -> {
+                    downaloadVideo();
+                    initRecyclerView();
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Just Song", (dialog, which) -> {
+                    initRecyclerView();
+                    dialog.dismiss();
+                }).show();
+
         initViews();
         initListeners();
+    }
+    @SuppressLint("StaticFieldLeak")
+    private void downaloadVideo() {
+        new YouTubeExtractor(this) {
+            @Override
+            public void onExtractionComplete(SparseArray<YtFile> ytFiles, VideoMeta vMeta) {
+                if (ytFiles != null) {
+                    int itag = 22;
+                    String downloadUrl = ytFiles.get(itag).getUrl();
+                    //Toast.makeText(MainActivity.this, downloadUrl, Toast.LENGTH_SHORT).show();
+                    download(downloadUrl);
+                }
+            }
+        }.extract(videoLink);
+    }
 
-        initRecyclerView();
+    private void download(String downloadUrl) {
+        File file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        PRDownloader.download(downloadUrl, file.getPath(), "Download.mp4")
+                .build()
+                .setOnStartOrResumeListener(() -> {
+                    if (!CommandExampleActivity.this.isFinishing()){
+                        progressDialog.show();
+                    }
+                })
+                .setOnPauseListener(() -> {
+
+                })
+                .setOnCancelListener(() -> {
+
+                })
+                .setOnProgressListener(progress -> {
+                    long n = progress.currentBytes * 100 / progress.totalBytes;
+                    progressDialog.setProgress((int) n);
+                })
+                .start(new OnDownloadListener() {
+                    @Override
+                    public void onDownloadComplete() {
+                        progressDialog.dismiss();
+                        Toast.makeText(CommandExampleActivity.this, "Done", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onError(Error error) {
+                        progressDialog.dismiss();
+                        Log.d("VideoSError", ""+error.toString());
+                        Toast.makeText(CommandExampleActivity.this, ""+error.toString(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private ArrayList<SongModel> songModelArrayList = new ArrayList<>();
