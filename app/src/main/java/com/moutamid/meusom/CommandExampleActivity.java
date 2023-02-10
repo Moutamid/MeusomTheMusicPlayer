@@ -2,6 +2,7 @@ package com.moutamid.meusom;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -57,8 +58,10 @@ import com.yausername.youtubedl_android.YoutubeDL;
 import com.yausername.youtubedl_android.YoutubeDLRequest;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -127,6 +130,9 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
 
     private FirebaseAuth auth = FirebaseAuth.getInstance();
 
+    String[] permission = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.MANAGE_EXTERNAL_STORAGE};
+
+
 //    private String YTUrl;
 
     private boolean isIntent = false;
@@ -175,6 +181,7 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
         new AlertDialog.Builder(this)
                 .setTitle("").setMessage("Do you want to download the both video and audio or just the audio song?")
                 .setPositiveButton("Both", (dialog, which) -> {
+                    ActivityCompat.requestPermissions(CommandExampleActivity.this, permission, 1);
                     downaloadVideo();
                     initRecyclerView();
                     dialog.dismiss();
@@ -203,8 +210,10 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
     }
 
     private void download(String downloadUrl) {
-        File file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        PRDownloader.download(downloadUrl, file.getPath(), "Download.mp4")
+        File file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/Meusom.");
+
+        String d = songModel.getSongName() + ".mp4";
+        PRDownloader.download(downloadUrl, file.getPath(), d)
                 .build()
                 .setOnStartOrResumeListener(() -> {
                     if (!CommandExampleActivity.this.isFinishing()){
@@ -231,8 +240,16 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                     @Override
                     public void onError(Error error) {
                         progressDialog.dismiss();
-                        Log.d("VideoSError", ""+error.toString());
-                        Toast.makeText(CommandExampleActivity.this, ""+error.toString(), Toast.LENGTH_SHORT).show();
+                        if (error.isServerError()) {
+                            Log.d("VideoSError", "Server : " + error.getServerErrorMessage());
+                            Toast.makeText(CommandExampleActivity.this, "Server : " + error.getServerErrorMessage(), Toast.LENGTH_SHORT).show();
+                        } else if (error.isConnectionError()){
+                            Log.d("VideoSError", "Connection : " + error.getConnectionException().getMessage());
+                            Toast.makeText(context, "Connection : " + error.getConnectionException().getMessage(), Toast.LENGTH_SHORT).show();
+                        } else {
+                            Log.d("VideoSError", "Error : " + error);
+                            Toast.makeText(context, ""+ error, Toast.LENGTH_SHORT).show();
+                        }
                     }
                 });
     }
