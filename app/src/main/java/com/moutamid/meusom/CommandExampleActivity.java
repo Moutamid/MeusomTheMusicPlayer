@@ -242,10 +242,10 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                         progressDialog.dismiss();
                         if (error.isServerError()) {
                             Log.d("VideoSError", "Server : " + error.getServerErrorMessage());
-                            Toast.makeText(CommandExampleActivity.this, "Server : " + error.getServerErrorMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(CommandExampleActivity.this, "Server Error: " + error.getServerErrorMessage(), Toast.LENGTH_SHORT).show();
                         } else if (error.isConnectionError()){
                             Log.d("VideoSError", "Connection : " + error.getConnectionException().getMessage());
-                            Toast.makeText(context, "Connection : " + error.getConnectionException().getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, "Connection Error: " + error.getConnectionException().getMessage(), Toast.LENGTH_SHORT).show();
                         } else {
                             Log.d("VideoSError", "Error : " + error);
                             Toast.makeText(context, ""+ error, Toast.LENGTH_SHORT).show();
