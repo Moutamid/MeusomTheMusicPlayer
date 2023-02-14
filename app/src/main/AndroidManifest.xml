@@ -7,8 +7,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<!--android:extractNativeLibs="true"
-        android:networkSecurityConfig="@xml/network_security_config"-->
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -19,27 +18,28 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MeusomTheMusicPlayer">
         <activity
+            android:name=".VideoPlayerActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity2"
-            android:theme="@style/Theme.Transparent"
+            android:exported="true"
             android:noHistory="true"
-            android:exported="true">
-
+            android:theme="@style/Theme.Transparent">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="text/plain" />
             </intent-filter>
-
         </activity>
         <activity android:name=".MySoundActivity" />
         <activity
             android:name=".CommandExampleActivity"
             android:screenOrientation="portrait" />
         <activity android:name=".AdvertisementACtivity" />
-        <activity android:name=".SettingsActivity"></activity>
-        <activity android:name=".DownloadActivity">
-
-        </activity>
+        <activity android:name=".SettingsActivity" />
+        <activity android:name=".DownloadActivity"></activity>
         <activity android:name=".LoginActivity" />
         <activity
             android:name=".MainActivity"
@@ -57,7 +57,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name="com.facebook.ads.AudienceNetworkActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
@@ -82,9 +81,6 @@
                 <action android:name="restartservice" />
             </intent-filter>
         </receiver>
-        <!--<uses-library
-            android:name="org.apache.http.legacy"
-            android:required="false" />-->
     </application>
 
 </manifest>

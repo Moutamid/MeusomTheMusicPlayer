@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
     private ImageView btnNextSmall;
     private ImageView btnPrevious;
     //    private ImageView btnPlaylist;
-    private ImageView btnRepeat;
+    private ImageView btnRepeat, playVideo;
     private ImageView btnShuffle;
     private SeekBar songProgressBar;
     private SeekBar songProgressBarSmall;
@@ -128,12 +128,24 @@ public class MainActivity extends AppCompatActivity implements MediaPlayer.OnCom
 //        btnPlaylist =  findViewById(R.id.btnPlaylist);
         btnRepeat = findViewById(R.id.btnRepeat);
         btnShuffle = findViewById(R.id.btnShuffle);
+        playVideo = findViewById(R.id.playVideo);
         songProgressBar = findViewById(R.id.songProgressBar);
         songProgressBarSmall = findViewById(R.id.songProgressBar1);
         songTitleLabel = findViewById(R.id.songTitle);
         songTitleLabel.setSelected(true);
         songCurrentDurationLabel = findViewById(R.id.songCurrentDurationLabel);
         songTotalDurationLabel = findViewById(R.id.songTotalDurationLabel);
+
+        playVideo.setOnClickListener(v -> {
+            String name = songsList.get(currentSongIndex).getSongName();
+            Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
+            i.putExtra("name", name);
+            i.putExtra("currentIDX", currentSongIndex);
+            if (mp.isPlaying()){
+                mp.pause();
+            }
+            startActivity(i);
+        });
 
         // Mediaplayer
         mp = new MediaPlayer();
