@@ -159,14 +159,13 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
         progressDialog.setTitle("Video is Downloading...");
         progressDialog.setMax(100);
 
-        videoLink = getIntent().getStringExtra(Constants.videoLink);
-
         if (getIntent().hasExtra(Constants.URL)) {
             songModel.setSongYTUrl(getIntent().getStringExtra(Constants.URL));
             songModel.setSongName(getIntent().getStringExtra(Constants.SONG_NAME));
             songModel.setSongAlbumName(getIntent().getStringExtra(Constants.SONG_ALBUM_NAME));
             songModel.setSongCoverUrl(getIntent().getStringExtra(Constants.SONG_COVER_URL));
             isIntent = getIntent().getBooleanExtra(Constants.FROM_INTENT, false);
+            videoLink = getIntent().getStringExtra(Constants.videoLink);
 
             Utils.databaseReference().child(Constants.SONGS)
                     .child(auth.getCurrentUser().getUid()).push()
@@ -196,17 +195,27 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
     }
     @SuppressLint("StaticFieldLeak")
     private void downaloadVideo() {
-        new YouTubeExtractor(this) {
-            @Override
-            public void onExtractionComplete(SparseArray<YtFile> ytFiles, VideoMeta vMeta) {
-                if (ytFiles != null) {
-                    int itag = 22;
-                    String downloadUrl = ytFiles.get(itag).getUrl();
-                    //Toast.makeText(MainActivity.this, downloadUrl, Toast.LENGTH_SHORT).show();
-                    download(downloadUrl);
-                }
+        if (!videoLink.isEmpty()){
+            try {
+                new YouTubeExtractor(this) {
+                    @Override
+                    public void onExtractionComplete(SparseArray<YtFile> ytFiles, VideoMeta vMeta) {
+                        if (ytFiles != null) {
+                            String downloadUrl = "";
+                            try {
+                                int itag = 22;
+                                downloadUrl = ytFiles.get(itag).getUrl();
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+                            download(downloadUrl);
+                        }
+                    }
+                }.extract(videoLink);
+            } catch (Exception e){
+                e.printStackTrace();
             }
-        }.extract(videoLink);
+        }
     }
 
     private void download(String downloadUrl) {
