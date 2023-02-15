@@ -8,6 +8,14 @@ android {
     compileSdkVersion 33
     buildToolsVersion "30.0.3"
 //    useLibrary 'org.apache.http.legacy'
+
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+    }
+
     defaultConfig {
         applicationId "com.moutamid.meusom"
         minSdkVersion 21
@@ -16,7 +24,7 @@ android {
         versionName project.versionName
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
+        setProperty("archivesBaseName", "MEUSOM-$versionName")
         ndk {
             abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
         }

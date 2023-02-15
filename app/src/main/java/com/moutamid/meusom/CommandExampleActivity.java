@@ -205,16 +205,19 @@ public class CommandExampleActivity extends AppCompatActivity implements View.On
                             try {
                                 int itag = 22;
                                 downloadUrl = ytFiles.get(itag).getUrl();
+                                download(downloadUrl);
                             } catch (Exception e){
                                 e.printStackTrace();
+                                Toast.makeText(context, "Video link is not valid", Toast.LENGTH_SHORT).show();
                             }
-                            download(downloadUrl);
                         }
                     }
                 }.extract(videoLink);
             } catch (Exception e){
                 e.printStackTrace();
             }
+        } else {
+            Toast.makeText(context, "Video link is not valid", Toast.LENGTH_SHORT).show();
         }
     }
 
